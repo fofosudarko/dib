@@ -25,18 +25,15 @@ runAs ()
 
 addMavenWrapperProperties ()
 {
-  local mavenWrapperPropertiesSrc="$1"
-  local mavenWrapperPropertiesDest="$2"
+  local mavenWrapperPropertiesSrc="$1" mavenWrapperPropertiesDest="$2"
 
   runAs "$DOCKER_USER" "rsync -av $mavenWrapperPropertiesSrc $mavenWrapperPropertiesDest"
 }
 
 addSpringbootKeystores ()
 {
-  local dockerFile="$1"
-  local keystoresSrc="$2"
-  local keystoresDest="$3"
-
+  local dockerFile="$1" keystoresSrc="$2" keystoresDest="$3"
+  
   if grep -qP 'keystores' "$dockerFile" 2> /dev/null
   then
     runAs "$DOCKER_USER" "rsync -av $keystoresSrc $keystoresDest"
@@ -99,7 +96,7 @@ buildSpringbootDockerImage ()
   exit \$?
 " || imageBuildStatus=1
 
-  runAs "$DOCKER_USER" "cp -a $BASE_APPLICATION_PROPERTIES $APPLICATION_PROPERTIES_DIR 2> /dev/null"
+  runAs "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
 
   return "$imageBuildStatus"
 }
@@ -208,7 +205,7 @@ buildDockerImage ()
 {
   case "$APP_FRAMEWORK" in
     springboot)
-      buildSpringbootDockerImage "$APPLICATION_PROPERTIES_DIR/application.properties"
+      buildSpringbootDockerImage "$SPRINGBOOT_APPLICATION_PROPERTIES_DIR/application.properties"
     ;;
     angular)
       buildAngularDockerImage
@@ -265,13 +262,15 @@ setKubernetesConfigs ()
 
   while read -r kubeConfig
   do
-    KUBECONFIG="${kubeDir}/${kubeConfig}:${KUBECONFIG}"
+    [[ -n "$kubeConfig" ]] && KUBECONFIG="${kubeDir}/${kubeConfig}:${KUBECONFIG}"
   done < <(echo -ne "$KUBECONFIGS"| sed -e 's/:/\n/g' -e 's/$/\n/g')
 }
 
 formatDockerComposeTemplate ()
 {
-  if [[ -s "$1" ]] 
+  local dockerComposeTemplate="$1" dockerComposeOut="$2"
+  
+  if [[ -s "$dockerComposeTemplate" ]]
   then
     runAs "$DOCKER_USER" "
       sed -e 's/@@APP_IMAGE@@/${APP_IMAGE}/g' \
@@ -280,17 +279,15 @@ formatDockerComposeTemplate ()
       -e 's/@@APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
       -e 's/@@APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
       -e 's/@@APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
-      -e 's/@@APP_NPM_BUILD_COMMANDS@@/${APP_NPM_BUILD_COMMANDS}/g' '$1' 1> '$2'
+      -e 's/@@APP_NPM_BUILD_COMMANDS@@/${APP_NPM_BUILD_COMMANDS}/g' '$dockerComposeTemplate' 1> '$dockerComposeOut'
     "
   fi
 }
 
 updateEnvFile ()
 {  
-  local envFile="$1"
-  local changedEnvFile="$2"
-  local originalEnvFile="$3"
-  local symlinkedEnvFile="$4"
+  local envFile="$1" changedEnvFile="$2" originalEnvFile="$3" symlinkedEnvFile="$4"
+  
   
   if [[ -s "$changedEnvFile" ]]
   then
@@ -307,6 +304,18 @@ updateEnvFile ()
   fi
 }
 
+detectFileChanged ()
+{
+  local originalFile="$1" changedFile="$2"
+
+  if [[ "$(diff $originalFile $changedFile 2> /dev/null| wc -l)" -ne 0 ]]
+  then
+    return 0
+  fi
+
+  return 1
+}
+
 generateKubernetesManifests ()
 {
   kubernetesResourcesAnnotationsChanged ()
@@ -314,8 +323,8 @@ generateKubernetesManifests ()
     local changedKubernetesResourcesAnnotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed
     local originalKubernetesResourcesAnnotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*original
     local newEntries=$(diff \
-      <(cat $changedKubernetesResourcesAnnotations 2> /dev/null| sort) \
-      <(cat $originalKubernetesResourcesAnnotations 2> /dev/null| sort) | wc -l)
+      <(sort $changedKubernetesResourcesAnnotations 2> /dev/null) \
+      <(sort $originalKubernetesResourcesAnnotations 2> /dev/null) | wc -l)
     
     if [[ "$newEntries" -ne 0 ]]
     then
@@ -327,22 +336,14 @@ generateKubernetesManifests ()
 
   dockerComposeFileChanged ()
   {
-    if [[ "$(diff $originalComposeFile $changedComposeFile 2> /dev/null| wc -l)" -ne 0 ]]
-    then
-      return 0
-    fi
-
-    return 1
+    return "$(detectFileChanged "$originalComposeFile" "$changedComposeFile")"
   }
 
   envFileChanged ()
   {
-    local envFile="$1"
-    local originalEnvFile="$2"
-    local changedEnvFile="$3"
-    local symlinkedEnvFile="$4"
+    local envFile="$1" originalEnvFile="$2" changedEnvFile="$3" symlinkedEnvFile="$4"
     
-    if [[ "$(diff $originalEnvFile $changedEnvFile 2> /dev/null| wc -l)" -ne 0 ]] || [[ ! -e "$symlinkedEnvFile" ]]
+    if detectFileChanged "$originalEnvFile" "$changedEnvFile" || [[ ! -e "$symlinkedEnvFile" ]]
     then
       updateEnvFile "$envFile" "$changedEnvFile" "$originalEnvFile" "$symlinkedEnvFile"
       return 0
@@ -406,9 +407,9 @@ generateKubernetesManifests ()
   dockerComposeFileChanged && DOCKER_COMPOSE_FILE_CHANGED=1
   kubernetesResourcesAnnotationsChanged && K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
   appEnvFileChanged && APP_ENV_FILE_CHANGED=1
+  appServiceEnvFileChanged && APP_SERVICE_ENV_FILE_CHANGED=1
   appCommonEnvFileChanged && APP_COMMON_ENV_FILE_CHANGED=1
   appProjectEnvFileChanged && APP_PROJECT_ENV_FILE_CHANGED=1
-  appServiceEnvFileChanged && APP_SERVICE_ENV_FILE_CHANGED=1
 
   if [[ "$DOCKER_COMPOSE_FILE_CHANGED" -eq 0 ]] && \
     [[ "$K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
@@ -421,6 +422,7 @@ generateKubernetesManifests ()
   fi
   
   runAs "$DOCKER_USER" "
+  
   getKubernetesResourcesAnnotations ()
   {
     dir -1 $DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed 2> /dev/null
@@ -438,7 +440,7 @@ generateKubernetesManifests ()
 
   getSpecLineNo ()
   {
-    grep -n 'spec:' --color=never \"\$1\"|cut -d: -f1
+    grep -n 'spec:' --color=never \"\$1\"| cut -d: -f1
   }
 
   printLinesBeforeSpec ()
@@ -487,17 +489,17 @@ EOF
 
   updateKubernetesResourcesWithAnnotations ()
   {
-    local kubernetesResourcesAnnotations=\"\$(getKubernetesResourcesAnnotations)\"
     local kubernetesResources=\"\$(getKubernetesResources)\"
+    local kubernetesResourcesAnnotations=\"\$(getKubernetesResourcesAnnotations)\"
 
     if [[ -n \"\$kubernetesResourcesAnnotations\" ]]
     then
       for kubernetesResourceAnnotation in \"\$kubernetesResourcesAnnotations\"
       do
-        annotationResource=\$(getKubernetesResourceFromAnnotationFile \"\$kubernetesResourceAnnotation\")
-        kubernetesResource=\$(selectKubernetesResource \"\$kubernetesResources\" \"\$annotationResource\")
-        changedResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${annotationResource}.k8s-annotations.changed
-        originalResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${annotationResource}.k8s-annotations.original
+        resourceAnnotation=\$(getKubernetesResourceFromAnnotationFile \"\$kubernetesResourceAnnotation\")
+        kubernetesResource=\$(selectKubernetesResource \"\$kubernetesResources\" \"\$resourceAnnotation\")
+        changedResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resourceAnnotation}.k8s-annotations.changed
+        originalResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resourceAnnotation}.k8s-annotations.original
         
         if [[ -n \"\$kubernetesResource\" ]]
         then
@@ -513,6 +515,7 @@ EOF
     [[ -d \"$DOCKER_APP_COMPOSE_K8S_DIR\" ]] || mkdir -p \"$DOCKER_APP_COMPOSE_K8S_DIR\"
     
     cd $DOCKER_APP_COMPOSE_K8S_DIR
+    
     $KOMPOSE_CMD convert -f $changedComposeFile
     
     if [[ \"$KUBERNETES_SERVICE_LABEL\" != \"io.kompose.service\" ]]
@@ -524,7 +527,9 @@ EOF
   }
 
   generateKubernetesManifests
+
   updateKubernetesResourcesWithAnnotations
+  
   cp $changedComposeFile $originalComposeFile
 "
   return 0
@@ -535,9 +540,9 @@ getKubernetesContexts ()
   local kubernetesContextFilter="${APP_KUBERNETES_CONTEXT}"
   
   runAs "$DOCKER_USER" "
-  KUBECONFIG=${KUBECONFIG} $KUBECTL_CMD config get-contexts --no-headers|\
-  grep $kubernetesContextFilter|\
-  tr -s '[:space:]'|awk '{ print \$2; }'
+  KUBECONFIG=${KUBECONFIG} $KUBECTL_CMD config get-contexts --no-headers| \
+  grep -P '$kubernetesContextFilter'| \
+  tr -s '[:space:]'| awk '{ print \$2; }'
 "
 }
 
@@ -549,11 +554,11 @@ deployToKubernetes ()
   
   while IFS=$'\n' read -r kubernetesContext
   do
-    runAs "$ROOT_USER" "
+    runAs "$SUPER_USER" "
 
   createKubernetesNamespaceIfNotExists ()
   {
-    if ! $KUBECTL_CMD get namespaces --all-namespaces -o wide --no-headers|grep -q $APP_KUBERNETES_NAMESPACE
+    if ! $KUBECTL_CMD get namespaces --all-namespaces -o wide --no-headers| grep -q $APP_KUBERNETES_NAMESPACE
     then
       $KUBECTL_CMD create namespace $APP_KUBERNETES_NAMESPACE
     fi
@@ -561,7 +566,8 @@ deployToKubernetes ()
 
   kubernetesDeploymentsExist ()
   {
-    if $KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers|grep -q $APP_IMAGE:$APP_IMAGE_TAG
+    if $KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
+      grep -q $APP_IMAGE:$APP_IMAGE_TAG
     then
       return 0
     fi
@@ -571,8 +577,8 @@ deployToKubernetes ()
 
   kubernetesDeploymentsScaledToZero ()
   {
-    local deployments
-    deployments=\$($KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers|grep $APP_IMAGE:$APP_IMAGE_TAG|awk '{ print \$2; }')
+    local deployments=\$($KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
+      grep $APP_IMAGE:$APP_IMAGE_TAG|awk '{ print \$2; }')
 
     if [[ \"\$deployments\" == \"0/0\" ]]
     then
@@ -616,10 +622,10 @@ deployToKubernetes ()
 "
   done < <(getKubernetesContexts)
 
-  msg 'Kubernetes manifests deployed'
+  msg 'Kubernetes manifests deployed successfully'
 }
 
-getKubernetesPatchDeploymentSpec ()
+getKubernetesDeploymentPatchSpec ()
 {
   cat <<EOF
 spec:
@@ -631,7 +637,8 @@ EOF
 
 patchKubernetesDeployment ()
 {
-  local KUBERNETES_DEPLOYMENT_PATCH=$(getKubernetesPatchDeploymentSpec)
+  local KUBERNETES_DEPLOYMENT_PATCH=$(getKubernetesDeploymentPatchSpec)
+  
   cat <<EOF
   $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DOCKER_APP_COMPOSE_K8S_DIR/*deployment* --patch '$KUBERNETES_DEPLOYMENT_PATCH'
 EOF
@@ -647,20 +654,14 @@ getAppImageTag ()
 {
   local appImageTag=${APP_IMAGE_TAG}
 
-  if [[ "$USE_GIT_COMMIT" = "true" ]]
+  if [[ "$USE_GIT_COMMIT" = "true" ]] && [[ -n "$GIT_COMMIT" ]]
   then
-    if [[ -n "$GIT_COMMIT" ]]
-    then
-      appImageTag=$(echo -ne $GIT_COMMIT|cut -c1-10)
-    fi
+    appImageTag=$(echo -ne $GIT_COMMIT| cut -c1-10)
   fi
 
-  if [[ "$USE_BUILD_DATE" = "true" ]]
+  if [[ "$USE_BUILD_DATE" = "true" ]] && [[ -n "$BUILD_DATE" ]]
   then
-    if [[ -n "$BUILD_DATE" ]]
-    then
-      appImageTag="${BUILD_DATE}-${appImageTag}"
-    fi
+    appImageTag="${BUILD_DATE}-${appImageTag}"
   fi
 
   case "$APP_ENVIRONMENT"
@@ -703,13 +704,13 @@ createDefaultDirectoriesIfNotExist ()
 "
 }
 
-komposeVersionValid ()
+isKomposeVersionValid ()
 {
-  local komposeVersion=$($KOMPOSE_CMD version)
+  local komposeVersion=$($KOMPOSE_CMD version) minorVersion=
 
   if grep -qP '^1' <<< "$komposeVersion"
   then
-    local minorVersion=$(grep -oP '\.\d{2}\.' <<< "$komposeVersion"| tr -d '.')
+    minorVersion=$(grep -oP '\.\d{2}\.' <<< "$komposeVersion"| tr -d '.')
     
     if [[ -n "$minorVersion" && "$minorVersion" -lt "21" ]]
     then
@@ -720,11 +721,30 @@ komposeVersionValid ()
   return 0
 }
 
+setAppFrontendBuildMode () 
+{
+  case "$APP_BUILD_MODE"
+  in
+    spa)
+      runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKERFILE"
+    ;;
+    universal)
+      runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKERFILE"
+    ;;
+    *)
+      msg "app build mode '$APP_BUILD_MODE' unknown"
+      return 1
+    ;;
+  esac
+
+  return 0
+}
+
 COMMAND="$0"
 
 if [[ "$#" -ne 6 ]]
 then
-  msg 'expects 5 arguments i.e. BUILD_COMMAND JENKINS_JOBS APP_PROJECT APP_FRAMEWORK APP_IMAGE'
+  msg 'expects 5 arguments i.e. BUILD_COMMAND JENKINS_JOB APP_PROJECT APP_FRAMEWORK APP_IMAGE'
   exit 1
 fi
 
@@ -753,7 +773,7 @@ KUBERNETES_SERVICE_LABEL=${KUBERNETES_SERVICE_LABEL:-'io.kompose.service'}
 : ${JENKINS_WORKSPACE='/var/lib/jenkins/workspace'}
 : ${DOCKER_USER='docker'}
 : ${JENKINS_USER='jenkins'}
-: ${ROOT_USER='root'}
+: ${SUPER_USER='root'}
 : ${DOCKER_HOME='/home/docker'}
 : ${DOCKER_APPS_DIR="$DOCKER_HOME/apps"}
 : ${DOCKER_APPS_CONFIG_DIR="$DOCKER_HOME/config"}
@@ -780,6 +800,9 @@ KUBERNETES_SERVICE_LABEL=${KUBERNETES_SERVICE_LABEL:-'io.kompose.service'}
 : ${DOCKER_APP_COMMON_ENV_DIR="$DOCKER_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"}
 : ${DOCKER_APP_PROJECT_ENV_DIR="$DOCKER_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"}
 : ${DOCKER_APP_SERVICE_ENV_DIR="$DOCKER_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"}
+: ${SPRINGBOOT_APPLICATION_PROPERTIES_DIR="$DOCKER_APP_BUILD_DEST/src/main/resources"}
+: ${SPRINGBOOT_BASE_APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application.properties"}
+: ${SPRINGBOOT_APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application-docker.properties"}
 
 KUBECONFIGS_INITIAL=microk8s-config
 KUBECONFIGS=${KUBECONFIGS:-${KUBECONFIGS_INITIAL}}
@@ -800,23 +823,23 @@ DOCKERFILE=$DOCKER_APP_BUILD_DEST/Dockerfile
 [[ -x "$KUBECTL_CMD" ]] || { msg 'kubectl command not found'; exit 1; }
 
 # check kompose version
-if ! komposeVersionValid
+if ! isKomposeVersionValid
 then
-  msg "invalid kompose command version. Please upgrade to a version greater than 1.20.x"
+  msg "Invalid kompose command version. Please upgrade to a version greater than 1.20.x"
   exit 1
 fi
 
 # check passed build command
 if ! echo -ne "$BUILD_COMMAND"| grep -qP "$BUILD_COMMANDS"
 then
-  msg "build command must be in $BUILD_COMMANDS"
+  msg "Build command must be in $BUILD_COMMANDS"
   exit 1
 fi
 
 # check passed app environment
 if ! echo -ne "$APP_ENVIRONMENT"| grep -qP "$APP_ENVIRONMENTS"
 then
-  msg "app environment must be in $APP_ENVIRONMENTS"
+  msg "App environment must be in $APP_ENVIRONMENTS"
   exit 1
 fi
 
@@ -827,39 +850,17 @@ copyDockerBuildFiles "$DOCKER_APP_BUILD_FILES" "$DOCKER_APP_BUILD_DEST"
 case "$APP_FRAMEWORK"
 in
   springboot)
-    APPLICATION_PROPERTIES_DIR="$DOCKER_APP_BUILD_DEST/src/main/resources"
-    BASE_APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application.properties"
-    APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application-docker.properties"
-
     runAs "$DOCKER_USER" "
-      [[ -d $APPLICATION_PROPERTIES_DIR ]] || mkdir -p $APPLICATION_PROPERTIES_DIR
-      cp $BASE_APPLICATION_PROPERTIES $APPLICATION_PROPERTIES_DIR
-      cp $APPLICATION_PROPERTIES $APPLICATION_PROPERTIES_DIR
+      [[ -d $SPRINGBOOT_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+      cp $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+      cp $SPRINGBOOT_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
     "
   ;;
-  angular|react|flask|express|mux)
-    :
+  angular|react|flask|express|mux|feathers)
+    runAs "$DOCKER_USER" "rsync -av $DOCKER_APP_CONFIG_DIR/ $DOCKER_APP_BUILD_DEST"
   ;;
   nuxt|next)
-    case "$APP_BUILD_MODE"
-    in
-      spa)
-        runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKERFILE"
-      ;;
-      universal)
-        runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKERFILE"
-      ;;
-      *)
-        msg "app build mode '$APP_BUILD_MODE' unknown"
-        exit 1
-      ;;
-    esac
-  ;;
-  feathers)
-    runAs "$DOCKER_USER" "
-    rsync -av $DOCKER_APP_CONFIG_DIR/run.sh $DOCKER_APP_BUILD_DEST
-    rsync -av $DOCKER_APP_CONFIG_DIR/config $DOCKER_APP_BUILD_DEST
-  "
+    setAppFrontendBuildMode || exit 1
   ;;
   *)
     msg "app framework '$APP_FRAMEWORK' unknown"
