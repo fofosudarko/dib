@@ -19,7 +19,7 @@ function add_maven_wrapper_properties() {
 function add_springboot_keystores() {
   local docker_file="$1" keystores_src="$2" keystores_dest="$3"
   
-  if grep -qP 'keystores' "$docker_file" 2> /dev/null
+  if grep -qE 'keystores' "$docker_file" 2> /dev/null
   then
     run_as "$DOCKER_USER" "rsync -av $keystores_src $keystores_dest"
   fi

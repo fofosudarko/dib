@@ -19,27 +19,28 @@ function run_as() {
 }
 
 function copy_docker_project() {
-  local jenkins_project="$1" docker_project="$2"
+  local ci_project="$1" docker_project="$2"
 
   msg 'Copying docker project ...'
+  
   run_as "$DOCKER_USER" "
   rm -rf $docker_project/*
-  rsync -av --exclude='.git/' $jenkins_project $docker_project
+  rsync -av --exclude='.git/' $ci_project $docker_project
 "
 }
 
 function copy_docker_build_files() { 
   local build_files="$1" docker_project="$2"
-
   local docker_compose_template="$DOCKER_APP_CONFIG_DIR/docker-compose.template.yml"
+  local docker_compose_file="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
 
   if [ -s "$docker_compose_template" ]
   then
-    docker_compose_file="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
     format_docker_compose_template "$docker_compose_template" "$docker_compose_file"
   fi
 
   msg 'Copying docker build files ...'
+  
   run_as "$DOCKER_USER" "
   rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project 2> /dev/null
 "
@@ -121,9 +122,9 @@ function create_default_directories_if_not_exist() {
 function is_kompose_version_valid() {
   local kompose_version=$($KOMPOSE_CMD version) minor_version=
 
-  if grep -qP '^1' <<< "$kompose_version"
+  if grep -qE '^1' <<< "$kompose_version"
   then
-    minor_version=$(grep -oP '\.\d{2}\.' <<< "$kompose_version"| tr -d '.')
+    minor_version=$(grep -oE '\.\d{2}\.' <<< "$kompose_version"| tr -d '.')
     
     if [[ -n "$minor_version" && "$minor_version" -lt "21" ]]
     then
@@ -246,10 +247,56 @@ function app_env_file_changed() {
 }
 
 function check_app_dependencies() {
-  [[ -x "$DOCKER_CMD" ]] || { msg 'docker command not found'; }
-  [[ -x "$DOCKER_COMPOSE_CMD" ]] || { msg 'docker-compose command not found'; }
-  [[ -x "$KOMPOSE_CMD" ]] || { msg 'kompose command not found'; }
-  [[ -x "$KUBECTL_CMD" ]] || { msg 'kubectl command not found'; }
+  if [[ -x "$DOCKER_CMD" ]] 
+  then
+    msg 'docker already installed successfully.'
+  else
+    msg '
+    Oops, docker command not found! 
+    Please install and continue since this command helps you to build and push your Docker images
+    '
+  fi
+
+  if [[ -x "$DOCKER_COMPOSE_CMD" ]] 
+  then
+    msg 'docker-compose installed successfully.'
+  else
+    msg '
+    Oops, docker-compose command not found! 
+    Please install and continue since this command helps you to build and run your Docker images collectively
+  '
+  fi
+
+  if [[ -x "$KOMPOSE_CMD" ]]
+  then
+    msg 'kompose already installed successfully.'
+  else
+    msg '
+    Oops, kompose command not found! 
+    Please install and continue since this command helps you to convert your docker-compose files to Kubernetes manifests.
+    '
+  fi
+
+  if [[ -x "$KUBECTL_CMD" ]] 
+  then
+    msg 'kubectl already installed successfully.'
+  else
+    msg '
+    Oops, kubectl command not found! 
+    Please install and continue since this command helps you to interact with the apiserver 
+    inside your Kubernetes master node for various kubernetes operations 
+    such as doing deployments, querying the state of your clusters and more.
+    '
+  fi
+
+  if [[ -x "$NANO_CMD" ]] 
+  then
+    msg 'nano already installed successfully.'
+  else
+    msg '
+    Oops, nano command not found! 
+    Please install and continue since this command helps you to edit some files as your default editor.'
+  fi
 }
 
 ## -- finish

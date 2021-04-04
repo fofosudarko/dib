@@ -26,7 +26,7 @@ function get_kubernetes_contexts() {
   
   run_as "$DOCKER_USER" "
   KUBECONFIG=${KUBECONFIG} $KUBECTL_CMD config get-contexts --no-headers| \
-  grep -P '$kubernetes_context_filter'| \
+  grep -E '$kubernetes_context_filter'| \
   tr -s '[:space:]'| awk '{ print \$2; }'
 "
 }
@@ -108,12 +108,12 @@ EOF
 
     cp \$kubernetes_resource \$kubernetes_resource_copy
 
-    local specLineNo=\"\$(get_spec_line_no \$kubernetes_resource)\"
+    local spec_line_no=\"\$(get_spec_line_no \$kubernetes_resource)\"
 
     (
-      print_lines_before_spec \"\$specLineNo\" \"\$kubernetes_resource_copy\"
+      print_lines_before_spec \"\$spec_line_no\" \"\$kubernetes_resource_copy\"
       add_kubernetes_resource_annotations \"\$kubernetes_resource_annotations\"
-      print_lines_after_spec_inclusive \"\$specLineNo\" \"\$kubernetes_resource_copy\"
+      print_lines_after_spec_inclusive \"\$spec_line_no\" \"\$kubernetes_resource_copy\"
     ) > \$kubernetes_resource || cp \$kubernetes_resource_copy \$kubernetes_resource
 
     rm -f \$kubernetes_resource_copy
