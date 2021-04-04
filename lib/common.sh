@@ -10,87 +10,80 @@
 
 ## - start here
 
-msg ()
-{
+function msg() {
   echo >&2 "$COMMAND: $1"
 }
 
-runAs ()
-{
+function run_as() {
   sudo su "$1" -c "$2"
 }
 
-copyDockerProject ()
-{
-  local jenkinsProject="$1" dockerProject="$2"
+function copy_docker_project() {
+  local jenkins_project="$1" docker_project="$2"
 
   msg 'Copying docker project ...'
-  runAs "$DOCKER_USER" "
-  rm -rf $dockerProject/*
-  rsync -av --exclude='.git/' $jenkinsProject $dockerProject
+  run_as "$DOCKER_USER" "
+  rm -rf $docker_project/*
+  rsync -av --exclude='.git/' $jenkins_project $docker_project
 "
 }
 
-copyDockerBuildFiles ()
-{ 
-  local buildFiles="$1" dockerProject="$2"
+function copy_docker_build_files() { 
+  local build_files="$1" docker_project="$2"
 
-  local dockerComposeTemplate="$DOCKER_APP_CONFIG_DIR/docker-compose.template.yml"
+  local docker_compose_template="$DOCKER_APP_CONFIG_DIR/docker-compose.template.yml"
 
-  if [ -s "$dockerComposeTemplate" ]
+  if [ -s "$docker_compose_template" ]
   then
-    dockerComposeFile="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
-    formatDockerComposeTemplate "$dockerComposeTemplate" "$dockerComposeFile"
+    docker_compose_file="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
+    format_docker_compose_template "$docker_compose_template" "$docker_compose_file"
   fi
 
   msg 'Copying docker build files ...'
-  runAs "$DOCKER_USER" "
-  rsync -av --exclude='$(basename $dockerComposeTemplate)' $buildFiles $dockerProject 2> /dev/null
+  run_as "$DOCKER_USER" "
+  rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project 2> /dev/null
 "
 }
 
-formatDockerComposeTemplate ()
-{
-  local dockerComposeTemplate="$1" dockerComposeOut="$2"
+function format_docker_compose_template() {
+  local docker_compose_template="$1" docker_compose_out="$2"
   
-  if [[ -s "$dockerComposeTemplate" ]]
+  if [[ -s "$docker_compose_template" ]]
   then
-    runAs "$DOCKER_USER" "
+    run_as "$DOCKER_USER" "
       sed -e 's/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g' \
       -e 's/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g' \
       -e 's/@@DIB_CONTAINER_REGISTRY@@/${CONTAINER_REGISTRY}/g' \
       -e 's/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
       -e 's/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
       -e 's/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
-      -e 's/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g' '$dockerComposeTemplate' 1> '$dockerComposeOut'
+      -e 's/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
   fi
 }
 
-updateEnvFile ()
-{  
-  local envFile="$1" changedEnvFile="$2" originalEnvFile="$3" symlinkedEnvFile="$4"
+function update_env_file() {  
+  local env_file="$1" changed_env_file="$2" original_env_file="$3" symlinked_env_file="$4"
   
-  if [[ -s "$changedEnvFile" ]]
+  if [[ -s "$changed_env_file" ]]
   then
-    runAs "$DOCKER_USER" "
-    cp $changedEnvFile $originalEnvFile 2> /dev/null
-    cp $changedEnvFile $envFile 2> /dev/null
-    [[ -h '$symlinkedEnvFile' ]] || ln -s $envFile $symlinkedEnvFile 2> /dev/null
+    run_as "$DOCKER_USER" "
+    cp $changed_env_file $original_env_file 2> /dev/null
+    cp $changed_env_file $env_file 2> /dev/null
+    [[ -h '$symlinked_env_file' ]] || ln -s $env_file $symlinked_env_file 2> /dev/null
   "
   else
-    runAs "$DOCKER_USER" "
-    test -f $changedEnvFile || \
-      touch $changedEnvFile && cp $changedEnvFile $envFile && ln -s $envFile $symlinkedEnvFile
+    run_as "$DOCKER_USER" "
+    test -f $changed_env_file || \
+      touch $changed_env_file && cp $changed_env_file $env_file && ln -s $env_file $symlinked_env_file
   "
   fi
 }
 
-detectFileChanged ()
-{
-  local originalFile="$1" changedFile="$2"
+function detect_file_changed() {
+  local original_file="$1" changed_file="$2"
 
-  if [[ "$(diff $originalFile $changedFile 2> /dev/null| wc -l)" -ne 0 ]]
+  if [[ "$(diff $original_file $changed_file 2> /dev/null| wc -l)" -ne 0 ]]
   then
     return 0
   fi
@@ -98,15 +91,13 @@ detectFileChanged ()
   return 1
 }
 
-abortBuildProcess ()
-{
+function abort_build_process() {
   msg 'docker image build process aborted'
   exit 1
 }
 
-createDefaultDirectoriesIfNotExist ()
-{
-  runAs "$DOCKER_USER" "
+function create_default_directories_if_not_exist() {
+  run_as "$DOCKER_USER" "
   defaultDirs=(
     ${DOCKER_APP_BUILD_DEST}
     ${DOCKER_APP_CONFIG_DIR}
@@ -127,15 +118,14 @@ createDefaultDirectoriesIfNotExist ()
 "
 }
 
-isKomposeVersionValid ()
-{
-  local komposeVersion=$($KOMPOSE_CMD version) minorVersion=
+function is_kompose_version_valid() {
+  local kompose_version=$($KOMPOSE_CMD version) minor_version=
 
-  if grep -qP '^1' <<< "$komposeVersion"
+  if grep -qP '^1' <<< "$kompose_version"
   then
-    minorVersion=$(grep -oP '\.\d{2}\.' <<< "$komposeVersion"| tr -d '.')
+    minor_version=$(grep -oP '\.\d{2}\.' <<< "$kompose_version"| tr -d '.')
     
-    if [[ -n "$minorVersion" && "$minorVersion" -lt "21" ]]
+    if [[ -n "$minor_version" && "$minor_version" -lt "21" ]]
     then
       return 1
     fi
@@ -144,15 +134,14 @@ isKomposeVersionValid ()
   return 0
 }
 
-setAppFrontendBuildMode () 
-{
+function set_app_frontend_build_mode() {
   case "$APP_BUILD_MODE"
   in
     spa)
-      runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKERFILE"
+      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKERFILE"
     ;;
     universal)
-      runAs "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKERFILE"
+      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKERFILE"
     ;;
     *)
       msg "app build mode '$APP_BUILD_MODE' unknown"
@@ -163,46 +152,44 @@ setAppFrontendBuildMode ()
   return 0
 }
 
-getAppImageTag ()
-{
-  local appImageTag=${APP_IMAGE_TAG}
+function get_app_image_tag() {
+  local app_image_tag=${APP_IMAGE_TAG}
 
   if [[ "$USE_GIT_COMMIT" = "true" ]] && [[ -n "$GIT_COMMIT" ]]
   then
-    appImageTag=$(echo -ne $GIT_COMMIT| cut -c1-10)
+    app_image_tag=$(echo -ne $GIT_COMMIT| cut -c1-10)
   fi
 
   if [[ "$USE_BUILD_DATE" = "true" ]] && [[ -n "$BUILD_DATE" ]]
   then
-    appImageTag="${BUILD_DATE}-${appImageTag}"
+    app_image_tag="${BUILD_DATE}-${app_image_tag}"
   fi
 
   case "$APP_ENVIRONMENT"
   in
-    development) appImageTag="dev-${appImageTag}";;
-    staging) appImageTag="staging-${appImageTag}";;
-    beta) appImageTag="beta-${appImageTag}";;
-    production) appImageTag="prod-${appImageTag}";;
-    demo) appImageTag="demo-${appImageTag}";;
-    alpha) appImageTag="alpha-${appImageTag}";;
+    development) app_image_tag="dev-${app_image_tag}";;
+    staging) app_image_tag="staging-${app_image_tag}";;
+    beta) app_image_tag="beta-${app_image_tag}";;
+    production) app_image_tag="prod-${app_image_tag}";;
+    demo) app_image_tag="demo-${app_image_tag}";;
+    alpha) app_image_tag="alpha-${app_image_tag}";;
     *)
       msg "app environment '$APP_ENVIRONMENT' unknown"
       exit 1
     ;;
   esac
 
-  printf '%s' $appImageTag
+  printf '%s' $app_image_tag
 }
 
-kubernetesResourcesAnnotationsChanged ()
-{
-  local changedKubernetesResourcesAnnotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed
-  local originalKubernetesResourcesAnnotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*original
-  local newEntries=$(diff \
-    <(sort $changedKubernetesResourcesAnnotations 2> /dev/null) \
-    <(sort $originalKubernetesResourcesAnnotations 2> /dev/null) | wc -l)
+function kubernetes_resources_annotations_changed() {
+  local changed_kubernetes_resources_annotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed
+  local original_kubernetes_resources_annotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*original
+  local new_entries=$(diff \
+    <(sort $changed_kubernetes_resources_annotations 2> /dev/null) \
+    <(sort $original_kubernetes_resources_annotations 2> /dev/null) | wc -l)
   
-  if [[ "$newEntries" -ne 0 ]]
+  if [[ "$new_entries" -ne 0 ]]
   then
     return 0
   fi
@@ -210,61 +197,59 @@ kubernetesResourcesAnnotationsChanged ()
   return 1
 }
 
-envFileChanged ()
-{
-  local envFile="$1" originalEnvFile="$2" changedEnvFile="$3" symlinkedEnvFile="$4"
+function env_file_changed() {
+  local env_file="$1" original_env_file="$2" changed_env_file="$3" symlinked_env_file="$4"
   
-  if detectFileChanged "$originalEnvFile" "$changedEnvFile" || [[ ! -e "$symlinkedEnvFile" ]]
+  if detect_file_changed "$original_env_file" "$changed_env_file" || [[ ! -e "$symlinked_env_file" ]]
   then
-    updateEnvFile "$envFile" "$changedEnvFile" "$originalEnvFile" "$symlinkedEnvFile"
+    update_env_file "$env_file" "$changed_env_file" "$original_env_file" "$symlinked_env_file"
     return 0
   fi
 
   return 1
 }
 
-appProjectEnvFileChanged ()
-{
-  local appProjectEnvFile=$DOCKER_APP_PROJECT_ENV_DIR/project.env
-  local originalAppProjectEnvFile=$DOCKER_APP_PROJECT_ENV_DIR/project.env.original
-  local symlinkedAppProjectEnvFile=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-project.env
-  local changedAppProjectEnvFile="$DOCKER_APP_PROJECT_ENV_CHANGED_FILE"
+function app_project_env_file_changed() {
+  local env_file=$DOCKER_APP_PROJECT_ENV_DIR/project.env
+  local original_env_file=$DOCKER_APP_PROJECT_ENV_DIR/project.env.original
+  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-project.env
+  local changed_env_file="$DOCKER_APP_PROJECT_ENV_CHANGED_FILE"
   
-  return $(envFileChanged \
-    "$appProjectEnvFile" "$originalAppProjectEnvFile" "$changedAppProjectEnvFile" "$symlinkedAppProjectEnvFile")
+  return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
-appCommonEnvFileChanged ()
-{
-  local appCommonEnvFile=$DOCKER_APP_COMMON_ENV_DIR/common.env
-  local originalAppCommonEnvFile=$DOCKER_APP_COMMON_ENV_DIR/common.env.original
-  local symlinkedAppCommonEnvFile=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-${APP_ENVIRONMENT}-common.env
-  local changedAppCommonEnvFile="$DOCKER_APP_COMMON_ENV_CHANGED_FILE"
+function app_common_env_file_changed() {
+  local env_file=$DOCKER_APP_COMMON_ENV_DIR/common.env
+  local original_env_file=$DOCKER_APP_COMMON_ENV_DIR/common.env.original
+  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-${APP_ENVIRONMENT}-common.env
+  local changed_env_file="$DOCKER_APP_COMMON_ENV_CHANGED_FILE"
   
-  return $(envFileChanged \
-    "$appCommonEnvFile" "$originalAppCommonEnvFile" "$changedAppCommonEnvFile" "$symlinkedAppCommonEnvFile")
+  return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
-appServiceEnvFileChanged ()
-{
-  local appServiceEnvFile=$DOCKER_APP_SERVICE_ENV_DIR/service.env
-  local originalAppServiceEnvFile=$DOCKER_APP_SERVICE_ENV_DIR/service.env.original
-  local symlinkedAppServiceEnvFile=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-service.env
-  local changedAppServiceEnvFile="$DOCKER_APP_SERVICE_ENV_CHANGED_FILE"
+function app_service_env_file_changed() {
+  local env_file=$DOCKER_APP_SERVICE_ENV_DIR/service.env
+  local original_env_file=$DOCKER_APP_SERVICE_ENV_DIR/service.env.original
+  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-service.env
+  local changed_env_file="$DOCKER_APP_SERVICE_ENV_CHANGED_FILE"
   
-  return $(envFileChanged \
-    "$appServiceEnvFile" "$originalAppServiceEnvFile" "$changedAppServiceEnvFile" "$symlinkedAppServiceEnvFile")
+  return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
-appEnvFileChanged ()
-{
-  local appEnvFile=$DOCKER_APP_COMPOSE_DIR/app.env
-  local originalAppEnvFile=$DOCKER_APP_COMPOSE_DIR/app.env.original
-  local symlinkedAppEnvFile=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-app.env
-  local changedAppEnvFile="$DOCKER_APP_ENV_CHANGED_FILE"
+function app_env_file_changed() {
+  local env_file=$DOCKER_APP_COMPOSE_DIR/app.env
+  local original_env_file=$DOCKER_APP_COMPOSE_DIR/app.env.original
+  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-app.env
+  local changed_env_file="$DOCKER_APP_ENV_CHANGED_FILE"
   
-  return $(envFileChanged \
-    "$appEnvFile" "$originalAppEnvFile" "$changedAppEnvFile" "$symlinkedAppEnvFile")
+  return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
+}
+
+function check_app_dependencies() {
+  [[ -x "$DOCKER_CMD" ]] || { msg 'docker command not found'; }
+  [[ -x "$DOCKER_COMPOSE_CMD" ]] || { msg 'docker-compose command not found'; }
+  [[ -x "$KOMPOSE_CMD" ]] || { msg 'kompose command not found'; }
+  [[ -x "$KUBECTL_CMD" ]] || { msg 'kubectl command not found'; }
 }
 
 ## -- finish

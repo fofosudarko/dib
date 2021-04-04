@@ -17,7 +17,7 @@
 : ${CONTAINER_REGISTRY=${CONTAINER_REGISTRY:-hub.docker.com}}
 : ${RUN_COMMANDS='^(build|build\-push|build\-push\-deploy|push|deploy)$'}
 : ${APP_ENVIRONMENTS='^(development|staging|beta|production|demo|alpha)$'}
-: ${CI_SERVER_WORKSPACE='/var/lib/jenkins/workspace'}
+: ${CI_SERVER_WORKSPACE='/var/LIB_DIR/jenkins/workspace'}
 : ${DOCKER_USER='docker'}
 : ${JENKINS_USER='jenkins'}
 : ${SUPER_USER='root'}

@@ -13,20 +13,23 @@
 
 ## - start here
 
-set -eux
+set -eu
 
 : ${SCRIPT_DIR=$(dirname $(realpath ${BASH_SOURCE[0]}))}
+: ${LIB_DIR="${SCRIPT_DIR}/lib"}
 
-loadFunctions ()
-{
-  local lib="${SCRIPT_DIR}/lib"
-  
-  test -f "$lib/vars.sh" && source "$lib/vars.sh"
-  test -f "$lib/common.sh" && source "$lib/common.sh"
-  test -f "$lib/springboot.sh" && source "$lib/springboot.sh"
-  test -f "$lib/docker.sh"  && source "$lib/docker.sh"
-  test -f "$lib/kubernetes.sh" && source "$lib/kubernetes.sh"
+function load_common_functions() {  
+  test -f "$LIB_DIR/common.sh" && source "$LIB_DIR/common.sh"
 }
+
+function load_all_functions() {  
+  test -f "$LIB_DIR/vars.sh" && source "$LIB_DIR/vars.sh"
+  test -f "$LIB_DIR/springboot.sh" && source "$LIB_DIR/springboot.sh"
+  test -f "$LIB_DIR/docker.sh"  && source "$LIB_DIR/docker.sh"
+  test -f "$LIB_DIR/kubernetes.sh" && source "$LIB_DIR/kubernetes.sh"
+}
+
+load_common_functions
 
 COMMAND="$0"
 
@@ -51,7 +54,7 @@ APP_BUILD_MODE=${APP_BUILD_MODE:-spa}
 APP_NPM_RUN_COMMANDS=${APP_NPM_RUN_COMMANDS:-'build:docker'}
 KUBERNETES_SERVICE_LABEL=${KUBERNETES_SERVICE_LABEL:-'io.kompose.service'}
 
-loadFunctions
+load_all_functions
 
 KUBECONFIGS_INITIAL=microk8s-config
 KUBECONFIGS=${KUBECONFIGS:-${KUBECONFIGS_INITIAL}}
@@ -62,23 +65,19 @@ APP_ENV_FILE_CHANGED=0
 APP_COMMON_ENV_FILE_CHANGED=0
 APP_PROJECT_ENV_FILE_CHANGED=0
 APP_SERVICE_ENV_FILE_CHANGED=0
-APP_IMAGE_TAG=$(getAppImageTag)
+APP_IMAGE_TAG=$(get_app_image_tag)
 DOCKERFILE=$DOCKER_APP_BUILD_DEST/Dockerfile
 
-# test Run commands
-[[ -x "$DOCKER_CMD" ]] || { msg 'docker command not found'; exit 1; }
-[[ -x "$DOCKER_COMPOSE_CMD" ]] || { msg 'docker-compose command not found'; exit 1; }
-[[ -x "$KOMPOSE_CMD" ]] || { msg 'kompose command not found'; exit 1; }
-[[ -x "$KUBECTL_CMD" ]] || { msg 'kubectl command not found'; exit 1; }
-
 # check kompose version
-if ! isKomposeVersionValid
+
+if ! is_kompose_version_valid
 then
   msg "Invalid kompose command version. Please upgrade to a version greater than 1.20.x"
   exit 1
 fi
 
 # check passed Run command
+
 if ! echo -ne "$RUN_COMMAND"| grep -qP "$RUN_COMMANDS"
 then
   msg "Run command must be in $RUN_COMMANDS"
@@ -86,32 +85,33 @@ then
 fi
 
 # check passed app environment
+
 if ! echo -ne "$APP_ENVIRONMENT"| grep -qP "$APP_ENVIRONMENTS"
 then
   msg "App environment must be in $APP_ENVIRONMENTS"
   exit 1
 fi
 
-createDefaultDirectoriesIfNotExist
+create_default_directories_if_not_exist
 
-copyDockerProject "$DOCKER_APP_BUILD_SRC" "$(dirname $DOCKER_APP_BUILD_DEST)"
+copy_docker_project "$DOCKER_APP_BUILD_SRC" "$(dirname $DOCKER_APP_BUILD_DEST)"
 
-copyDockerBuildFiles "$DOCKER_APP_BUILD_FILES" "$DOCKER_APP_BUILD_DEST"
+copy_docker_build_files "$DOCKER_APP_BUILD_FILES" "$DOCKER_APP_BUILD_DEST"
 
 case "$APP_FRAMEWORK"
 in
   springboot)
-    runAs "$DOCKER_USER" "
+    run_as "$DOCKER_USER" "
       [[ -d $SPRINGBOOT_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
       cp $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
       cp $SPRINGBOOT_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
     "
   ;;
   angular|react|flask|express|mux|feathers)
-    runAs "$DOCKER_USER" "rsync -av $DOCKER_APP_CONFIG_DIR/ $DOCKER_APP_BUILD_DEST"
+    run_as "$DOCKER_USER" "rsync -av $DOCKER_APP_CONFIG_DIR/ $DOCKER_APP_BUILD_DEST"
   ;;
   nuxt|next)
-    setAppFrontendBuildMode || exit 1
+    set_app_frontend_build_mode || exit 1
   ;;
   *)
     msg "app framework '$APP_FRAMEWORK' unknown"
@@ -121,22 +121,25 @@ esac
 
 if [[ "$RUN_COMMAND" == "build" ]]
 then
-  buildDockerImage || abortBuildProcess
+  build_docker_image || abort_build_process
 elif [[ "$RUN_COMMAND" == "build-push" ]]
 then
-  buildDockerImage || abortBuildProcess
-  pushDockerImage
+  build_docker_image || abort_build_process
+  push_docker_image
 elif [[ "$RUN_COMMAND" == "build-push-deploy" ]]
 then
-  buildDockerImage || abortBuildProcess
-  pushDockerImage
-  deployToKubernetes
+  build_docker_image || abort_build_process
+  push_docker_image
+  deploy_to_kubernetes
 elif [[ "$RUN_COMMAND" == "push" ]]
 then
-  pushDockerImage
+  push_docker_image
 elif [[ "$RUN_COMMAND" == "deploy" ]]
 then
-  deployToKubernetes
+  deploy_to_kubernetes
+elif [[ "$RUN_COMMAND" == "doctor" ]]
+then
+  check_app_dependencies
 else
   msg 'no Run command specified'
   exit 1

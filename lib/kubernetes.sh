@@ -10,50 +10,47 @@
 
 ## - start here
 
-setKubernetesConfigs ()
-{
-  local kubeDir=$KUBE_HOME
+function set_kubernetes_configs() {
+  local kube_dir=$KUBE_HOME
 
   msg 'Setting Kubernetes configs ...'
 
-  while read -r kubeConfig
+  while read -r kube_config
   do
-    [[ -n "$kubeConfig" ]] && KUBECONFIG="${kubeDir}/${kubeConfig}:${KUBECONFIG}"
+    [[ -n "$kube_config" ]] && KUBECONFIG="${kube_dir}/${kube_config}:${KUBECONFIG}"
   done < <(echo -ne "$KUBECONFIGS"| sed -e 's/:/\n/g' -e 's/$/\n/g')
 }
 
-getKubernetesContexts ()
-{
-  local kubernetesContextFilter="${APP_KUBERNETES_CONTEXT}"
+function get_kubernetes_contexts() {
+  local kubernetes_context_filter="${APP_KUBERNETES_CONTEXT}"
   
-  runAs "$DOCKER_USER" "
+  run_as "$DOCKER_USER" "
   KUBECONFIG=${KUBECONFIG} $KUBECTL_CMD config get-contexts --no-headers| \
-  grep -P '$kubernetesContextFilter'| \
+  grep -P '$kubernetes_context_filter'| \
   tr -s '[:space:]'| awk '{ print \$2; }'
 "
 }
 
-generateKubernetesManifests ()
-{
-  dockerComposeFileChanged ()
-  {
-    return "$(detectFileChanged "$originalComposeFile" "$changedComposeFile")"
+function generate_kubernetes_manifests() {
+  
+  function docker_compose_file_changed() {
+    return "$(detect_file_changed "$original_compose_file" "$changed_compose_file")"
   }
   
   msg 'Generating Kubernetes manifests ...'
 
-  local originalComposeFile=$DOCKER_APP_COMPOSE_DIR/docker-compose.original.yml
-  local changedComposeFile=$DOCKER_APP_COMPOSE_DIR/docker-compose.changed.yml
-  local templateComposeFile="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+  local original_compose_file=$DOCKER_APP_COMPOSE_DIR/docker-compose.original.yml
+  local changed_compose_file=$DOCKER_APP_COMPOSE_DIR/docker-compose.changed.yml
+  local template_compose_file="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
 
-  formatDockerComposeTemplate "$templateComposeFile" "$changedComposeFile"
+  format_docker_compose_template "$template_compose_file" "$changed_compose_file"
 
-  dockerComposeFileChanged && DOCKER_COMPOSE_FILE_CHANGED=1
-  kubernetesResourcesAnnotationsChanged && K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
-  appEnvFileChanged && APP_ENV_FILE_CHANGED=1
-  appServiceEnvFileChanged && APP_SERVICE_ENV_FILE_CHANGED=1
-  appCommonEnvFileChanged && APP_COMMON_ENV_FILE_CHANGED=1
-  appProjectEnvFileChanged && APP_PROJECT_ENV_FILE_CHANGED=1
+  docker_compose_file_changed && DOCKER_COMPOSE_FILE_CHANGED=1
+  kubernetes_resources_annotations_changed && K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
+  app_env_file_changed && APP_ENV_FILE_CHANGED=1
+  app_service_env_file_changed && APP_SERVICE_ENV_FILE_CHANGED=1
+  app_common_env_file_changed && APP_COMMON_ENV_FILE_CHANGED=1
+  app_project_env_file_changed && APP_PROJECT_ENV_FILE_CHANGED=1
 
   if [[ "$DOCKER_COMPOSE_FILE_CHANGED" -eq 0 ]] && \
     [[ "$K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
@@ -65,102 +62,92 @@ generateKubernetesManifests ()
     return 1
   fi
   
-  runAs "$DOCKER_USER" "
+  run_as "$DOCKER_USER" "
   
-  getKubernetesResourcesAnnotations ()
-  {
+  function get_kubernetes_resources_annotations() {
     dir -1 $DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed 2> /dev/null
   }
 
-  getKubernetesResources ()
-  {
+  function get_kubernetes_resources() {
     dir -1 $DOCKER_APP_COMPOSE_K8S_DIR/* 2> /dev/null
   }
 
-  getKubernetesResourceFromAnnotationFile ()
-  {
+  function get_kubernetes_resource_from_annotation_file() {
     echo -ne \"\$(basename \$1)\"| cut -d. -f1
   }
 
-  getSpecLineNo ()
-  {
+  function get_spec_line_no() {
     grep -n 'spec:' --color=never \"\$1\"| cut -d: -f1
   }
 
-  printLinesBeforeSpec ()
-  {
+  function print_lines_before_spec() {
     sed -n \"1,\$((\$1 - 1))p\" \$2
   }
 
-  printLinesAfterSpecInclusive ()
-  {
+  function print_lines_after_spec_inclusive() {
     sed -n \"\$1,\\\$p\" \$2
   }
 
-  selectKubernetesResource ()
-  {
+  function select_kubernetes_resource() {
     echo \"\$1\"| grep --color=never \"\$2\"
   }
 
-  addKubernetesResourceAnnotations ()
-  {
-    local k8sResourceAnnotations=\"\$1\"
+  function add_kubernetes_resource_annotations() {
+    local k8s_resource_annotations=\"\$1\"
     
     cat <<EOF             
   annotations:
-\$(while read -r annotation; do echo \"    \$annotation\"; done < \$k8sResourceAnnotations)  
+\$(while read -r annotation; do echo \"    \$annotation\"; done < \$k8s_resource_annotations)  
 EOF
   }
 
-  insertKubernetesResourceAnnotations ()
-  {
-    local kubernetesResource=\"\$1\"
-    local kubernetesResourceAnnotations=\"\$2\"
-    local kubernetesResourceCopy=\"\$kubernetesResource\".copy
+  function insert_kubernetes_resource_annotations() {
+    local kubernetes_resource=\"\$1\"
+    local kubernetes_resource_annotations=\"\$2\"
+    local kubernetes_resource_copy=\"\$kubernetes_resource\".copy
 
-    cp \$kubernetesResource \$kubernetesResourceCopy
+    cp \$kubernetes_resource \$kubernetes_resource_copy
 
-    local specLineNo=\"\$(getSpecLineNo \$kubernetesResource)\"
+    local specLineNo=\"\$(get_spec_line_no \$kubernetes_resource)\"
 
     (
-      printLinesBeforeSpec \"\$specLineNo\" \"\$kubernetesResourceCopy\"
-      addKubernetesResourceAnnotations \"\$kubernetesResourceAnnotations\"
-      printLinesAfterSpecInclusive \"\$specLineNo\" \"\$kubernetesResourceCopy\"
-    ) > \$kubernetesResource || cp \$kubernetesResourceCopy \$kubernetesResource
+      print_lines_before_spec \"\$specLineNo\" \"\$kubernetes_resource_copy\"
+      add_kubernetes_resource_annotations \"\$kubernetes_resource_annotations\"
+      print_lines_after_spec_inclusive \"\$specLineNo\" \"\$kubernetes_resource_copy\"
+    ) > \$kubernetes_resource || cp \$kubernetes_resource_copy \$kubernetes_resource
 
-    rm -f \$kubernetesResourceCopy
+    rm -f \$kubernetes_resource_copy
   }
 
-  updateKubernetesResourcesWithAnnotations ()
-  {
-    local kubernetesResources=\"\$(getKubernetesResources)\"
-    local kubernetesResourcesAnnotations=\"\$(getKubernetesResourcesAnnotations)\"
+  function update_kubernetes_resources_with_annotations() {
+    local kubernetes_resources=\"\$(get_kubernetes_resources)\"
+    local kubernetes_resources_annotations=\"\$(get_kubernetes_resources_annotations)\"
 
-    if [[ -n \"\$kubernetesResourcesAnnotations\" ]]
+    if [[ -n \"\$kubernetes_resources_annotations\" ]]
     then
-      for kubernetesResourceAnnotation in \"\$kubernetesResourcesAnnotations\"
+      for kubernetes_resource_annotation in \"\$kubernetes_resources_annotations\"
       do
-        resourceAnnotation=\$(getKubernetesResourceFromAnnotationFile \"\$kubernetesResourceAnnotation\")
-        kubernetesResource=\$(selectKubernetesResource \"\$kubernetesResources\" \"\$resourceAnnotation\")
-        changedResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resourceAnnotation}.k8s-annotations.changed
-        originalResourceAnnotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resourceAnnotation}.k8s-annotations.original
+        resource_annotation=\$(get_kubernetes_resource_from_annotation_file \"\$kubernetes_resource_annotation\")
+        kubernetes_resource=\$(select_kubernetes_resource \"\$kubernetes_resources\" \"\$resource_annotation\")
+        changed_resource_annotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.changed
+        original_resource_annotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.original
         
-        if [[ -n \"\$kubernetesResource\" ]]
+        if [[ -n \"\$kubernetes_resource\" ]]
         then
-          insertKubernetesResourceAnnotations \"\$kubernetesResource\" \"\$kubernetesResourceAnnotation\"
-          cp \$changedResourceAnnotation \$originalResourceAnnotation
+          insert_kubernetes_resource_annotations \"\$kubernetes_resource\" \"\$kubernetes_resource_annotation\"
+          cp \$changed_resource_annotation \$original_resource_annotation
         fi
       done
     fi
   }
 
-  generateKubernetesManifests ()
+  generate_kubernetes_manifests ()
   {
     [[ -d \"$DOCKER_APP_COMPOSE_K8S_DIR\" ]] || mkdir -p \"$DOCKER_APP_COMPOSE_K8S_DIR\"
     
     cd $DOCKER_APP_COMPOSE_K8S_DIR
     
-    $KOMPOSE_CMD convert -f $changedComposeFile
+    $KOMPOSE_CMD convert -f $changed_compose_file
     
     if [[ \"$KUBERNETES_SERVICE_LABEL\" != \"io.kompose.service\" ]]
     then
@@ -170,35 +157,32 @@ EOF
     sed -i 's/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g' *configmap* 2> /dev/null
   }
 
-  generateKubernetesManifests
+  generate_kubernetes_manifests
 
-  updateKubernetesResourcesWithAnnotations
+  update_kubernetes_resources_with_annotations
   
-  cp $changedComposeFile $originalComposeFile
+  cp $changed_compose_file $original_compose_file
 "
   return 0
 }
 
-deployToKubernetes ()
-{
-  setKubernetesConfigs
+function deploy_to_kubernetes() {
+  set_kubernetes_configs
   
-  generateKubernetesManifests
+  generate_kubernetes_manifests
   
-  while IFS=$'\n' read -r kubernetesContext
+  while IFS=$'\n' read -r kubernetes_context
   do
-    runAs "$SUPER_USER" "
+    run_as "$SUPER_USER" "
 
-  createKubernetesNamespaceIfNotExists ()
-  {
+  function create_kubernetes_namespace_if_not_exists() {
     if ! $KUBECTL_CMD get namespaces --all-namespaces -o wide --no-headers| grep -q $APP_KUBERNETES_NAMESPACE
     then
       $KUBECTL_CMD create namespace $APP_KUBERNETES_NAMESPACE
     fi
   }
 
-  kubernetesDeploymentsExist ()
-  {
+  function kubernetes_deployments_exist() {
     if $KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
       grep -q $APP_IMAGE:$APP_IMAGE_TAG
     then
@@ -208,10 +192,9 @@ deployToKubernetes ()
     return 1
   }
 
-  kubernetesDeploymentsScaledToZero ()
-  {
+  function kubernetes_deployments_scaled_to_zero() {
     local deployments=\$($KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
-      grep $APP_IMAGE:$APP_IMAGE_TAG|awk '{ print \$2; }')
+      grep $APP_IMAGE:$APP_IMAGE_TAG| awk '{ print \$2; }')
 
     if [[ \"\$deployments\" == \"0/0\" ]]
     then
@@ -223,13 +206,13 @@ deployToKubernetes ()
 
   export KUBECONFIG=${KUBECONFIG}
 
-  echo $COMMAND: Switching kubernetes context to $kubernetesContext ...
+  echo $COMMAND: Switching kubernetes context to $kubernetes_context ...
 
-  $KUBECTL_CMD config use-context $kubernetesContext
+  $KUBECTL_CMD config use-context $kubernetes_context
 
   APP_DB_CONNECTION_POOL=$APP_DB_CONNECTION_POOL
 
-  createKubernetesNamespaceIfNotExists
+  create_kubernetes_namespace_if_not_exists
 
   if [[ \$APP_DB_CONNECTION_POOL == 'session' ]]
   then
@@ -237,8 +220,8 @@ deployToKubernetes ()
     $KUBECTL_CMD scale deployment/$APP_IMAGE --replicas=0 -n $APP_KUBERNETES_NAMESPACE 
   fi
 
-  if \$(kubernetesDeploymentsExist) && \
-    ! \$(kubernetesDeploymentsScaledToZero) && \
+  if \$(kubernetes_deployments_exist) && \
+    ! \$(kubernetes_deployments_scaled_to_zero) && \
     [[ \"$DOCKER_COMPOSE_FILE_CHANGED\" == \"0\" ]] && \
     [[ \"$K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED\" == \"0\" ]] && \
     [[ \"$APP_ENV_FILE_CHANGED\" == \"0\" ]] && \
@@ -247,19 +230,18 @@ deployToKubernetes ()
     [[ \"$APP_PROJECT_ENV_FILE_CHANGED\" == \"0\" ]]
   then
     echo $COMMAND: Patching kubernetes deployments ...
-    eval \"$(patchKubernetesDeployment)\"
+    eval \"$(patch_kubernetes_deployment)\"
   else
     echo $COMMAND: Applying kubernetes manifests ...
     $KUBECTL_CMD apply -f $DOCKER_APP_COMPOSE_K8S_DIR -n $APP_KUBERNETES_NAMESPACE
   fi
 "
-  done < <(getKubernetesContexts)
+  done < <(get_kubernetes_contexts)
 
   msg 'Kubernetes manifests deployed successfully'
 }
 
-getKubernetesDeploymentPatchSpec ()
-{
+function get_kubernetes_deployment_patch_spec() {
   cat <<EOF
 spec:
   template:
@@ -268,12 +250,11 @@ spec:
 EOF
 }
 
-patchKubernetesDeployment ()
-{
-  local KUBERNETES_DEPLOYMENT_PATCH=$(getKubernetesDeploymentPatchSpec)
+function patch_kubernetes_deployment() {
+  local kubernetes_deployment_patch=$(get_kubernetes_deployment_patch_spec)
   
   cat <<EOF
-  $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DOCKER_APP_COMPOSE_K8S_DIR/*deployment* --patch '$KUBERNETES_DEPLOYMENT_PATCH'
+  $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DOCKER_APP_COMPOSE_K8S_DIR/*deployment* --patch '$kubernetes_deployment_patch'
 EOF
 }
 

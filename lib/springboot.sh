@@ -10,20 +10,18 @@
 
 ## - start here
 
-addMavenWrapperProperties ()
-{
-  local mavenWrapperPropertiesSrc="$1" mavenWrapperPropertiesDest="$2"
+function add_maven_wrapper_properties() {
+  local maven_wrapper_properties_src="$1" maven_wrapper_properties_dest="$2"
 
-  runAs "$DOCKER_USER" "rsync -av $mavenWrapperPropertiesSrc $mavenWrapperPropertiesDest"
+  run_as "$DOCKER_USER" "rsync -av $maven_wrapper_properties_src $maven_wrapper_properties_dest"
 }
 
-addSpringbootKeystores ()
-{
-  local dockerFile="$1" keystoresSrc="$2" keystoresDest="$3"
+function add_springboot_keystores() {
+  local docker_file="$1" keystores_src="$2" keystores_dest="$3"
   
-  if grep -qP 'keystores' "$dockerFile" 2> /dev/null
+  if grep -qP 'keystores' "$docker_file" 2> /dev/null
   then
-    runAs "$DOCKER_USER" "rsync -av $keystoresSrc $keystoresDest"
+    run_as "$DOCKER_USER" "rsync -av $keystores_src $keystores_dest"
   fi
 }
 

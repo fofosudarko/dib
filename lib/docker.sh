@@ -10,53 +10,51 @@
 
 ## - start here
 
-buildSpringbootDockerImage ()
-{
-  local applicationProperties="$1"
-  local springbootProfile="spring.profiles.active=docker"
-  local dockerFile="$DOCKERFILE"
-  local targetImage="$APP_IMAGE:$APP_IMAGE_TAG"
-  local imageBuildStatus=0
+function build_springboot_docker_image() {
+  local application_properties_file="$1"
+  local springboot_app_profile="spring.profiles.active=docker"
+  local docker_file="$DOCKERFILE"
+  local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+  local image_build_status=0
 
   msg 'Building springboot docker image ...'
 
-  testDockerfile=$(runAs "$DOCKER_USER" "test -f $dockerFile; echo -ne \$?")
+  check_docker_file=$(run_as "$DOCKER_USER" "test -f $docker_file; echo -ne \$?")
 
-  if [[ "$testDockerfile" != "0" ]]
+  if [[ "$check_docker_file" != "0" ]]
   then
     msg 'no Dockerfile found'
     exit 1
   fi
 
-  addMavenWrapperProperties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
-  addSpringbootKeystores "$dockerFile" "$DOCKER_APP_KEYSTORES_SRC" "$DOCKER_APP_KEYSTORES_DEST"
+  add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
+  add_springboot_keystores "$docker_file" "$DOCKER_APP_KEYSTORES_SRC" "$DOCKER_APP_KEYSTORES_DEST"
 
-  runAs "$DOCKER_USER" "
-  sed -i 's/^spring\.profiles\.active\=.*/$springbootProfile/g' $applicationProperties
-  $DOCKER_CMD build -t'$targetImage' $DOCKER_APP_BUILD_DEST
+  run_as "$DOCKER_USER" "
+  sed -i 's/^spring\.profiles\.active\=.*/$springboot_app_profile/g' $application_properties_file
+  $DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST
   exit \$?
-" || imageBuildStatus=1
+" || image_build_status=1
 
-  runAs "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
+  run_as "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
 
-  return "$imageBuildStatus"
+  return "$image_build_status"
 }
 
-buildDockerImageFromComposeFile ()
-{
-  local dockerFile="$DOCKERFILE"
-  local dockerComposeFile="$DOCKER_APP_BUILD_DEST/docker-compose.yml"
-  local targetImage="$APP_IMAGE:$APP_IMAGE_TAG"
-  local imageBuildStatus=0
+function build_docker_image_from_compose_file() {
+  local docker_file="$DOCKERFILE"
+  local docker_compose_file="$DOCKER_APP_BUILD_DEST/docker-compose.yml"
+  local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+  local image_build_status=0
 
-  runAs "$DOCKER_USER" "
-  if [[ ! -f \"$dockerFile\" ]]
+  run_as "$DOCKER_USER" "
+  if [[ ! -f \"$docker_file\" ]]
   then
     echo $COMMAND: no Dockerfile found
     exit 1
   fi
 
-  if [[ ! -f \"$dockerComposeFile\" ]]
+  if [[ ! -f \"$docker_compose_file\" ]]
   then
     echo $COMMAND: no docker compose file found
     exit 1
@@ -65,19 +63,18 @@ buildDockerImageFromComposeFile ()
   exit 0
 " || exit 1
 
-  runAs "$DOCKER_USER" "$DOCKER_COMPOSE_CMD -f $dockerComposeFile build; exit \$?" || imageBuildStatus=1
+  run_as "$DOCKER_USER" "$DOCKER_COMPOSE_CMD -f $docker_compose_file build; exit \$?" || image_build_status=1
 
-  return "$imageBuildStatus"
+  return "$image_build_status"
 }
 
-buildDockerImageFromFile ()
-{
-  local dockerFile="$DOCKERFILE"
-  local targetImage="$APP_IMAGE:$APP_IMAGE_TAG"
-  local imageBuildStatus=0
+function build_docker_image_from_file() {
+  local docker_file="$DOCKERFILE"
+  local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+  local image_build_status=0
 
-  runAs "$DOCKER_USER" "
-  if [[ ! -f \"$dockerFile\" ]]
+  run_as "$DOCKER_USER" "
+  if [[ ! -f \"$docker_file\" ]]
   then
     echo $COMMAND: no Dockerfile found
     exit 1
@@ -86,91 +83,82 @@ buildDockerImageFromFile ()
   exit 0
 " || exit 1
 
-  runAs "$DOCKER_USER" " 
-  $DOCKER_CMD build -t'$targetImage' $DOCKER_APP_BUILD_DEST
+  run_as "$DOCKER_USER" " 
+  $DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST
   exit \$?
-  " || imageBuildStatus=1
+  " || image_build_status=1
 
-  return "$imageBuildStatus"
+  return "$image_build_status"
 }
 
-buildAngularDockerImage ()
-{
+function build_angular_docker_image() {
   msg 'Building angular docker image ...'
-  buildDockerImageFromComposeFile
+  build_docker_image_from_compose_file
 }
 
-buildReactDockerImage ()
-{
+function build_react_docker_image() {
   msg 'Building react docker image ...'
-  buildDockerImageFromComposeFile
+  build_docker_image_from_compose_file
 }
 
-buildFlaskDockerImage ()
-{
+function build_flask_docker_image() {
   msg 'Building flask docker image ...'
-  buildDockerImageFromFile
+  build_docker_image_from_file
 }
 
-buildNuxtDockerImage ()
-{
+function build_nuxt_docker_image() {
   msg 'Building nuxt docker image ...'
-  buildDockerImageFromComposeFile
+  build_docker_image_from_compose_file
 }
 
-buildNextDockerImage ()
-{
+function build_next_docker_image() {
   msg 'Building next docker image ...'
-  buildDockerImageFromComposeFile
+  build_docker_image_from_compose_file
 }
 
-buildFeathersDockerImage ()
-{
+function build_feathers_docker_image() {
   msg 'Building feathers docker image ...'
-  buildDockerImageFromFile
+  build_docker_image_from_file
 }
 
-buildExpressDockerImage ()
-{
+function build_express_docker_image() {
   msg 'Building express docker image ...'
-  buildDockerImageFromFile
+  build_docker_image_from_file
 }
 
-buildMuxDockerImage ()
-{
+function build_mux_docker_image() {
   msg 'Building mux docker image ...'
-  buildDockerImageFromFile
+  build_docker_image_from_file
 }
 
-buildDockerImage ()
-{
+function build_docker_image() {
   case "$APP_FRAMEWORK" in
     springboot)
-      buildSpringbootDockerImage "$SPRINGBOOT_APPLICATION_PROPERTIES_DIR/application.properties"
+      build_springboot_docker_image "$SPRINGBOOT_APPLICATION_PROPERTIES_DIR/application.properties"
     ;;
     angular)
-      buildAngularDockerImage
+      build_angular_docker_image
     ;;
     react)
-      buildReactDockerImage
+      build_react_docker_image
     ;;
     flask)
-      buildFlaskDockerImage
+      build_flask_docker_image
     ;;
     nuxt)
-      buildNuxtDockerImage
+      build_nuxt_docker_image
     ;;
     next)
-      buildNextDockerImage
+      build_next_docker_image
     ;;
     feathers)
-      buildFeathersDockerImage
+      build_feathers_docker_image
     ;;
     express)
-      buildExpressDockerImage
+      build_express_docker_image
     ;;
     mux)
-      buildMuxDockerImage
+      build_mux_docker_image
     ;;
     *)
       msg "$APP_FRAMEWORK unknown"
@@ -179,18 +167,17 @@ buildDockerImage ()
   esac
 }
 
-pushDockerImage ()
-{
-  local targetImage="$APP_IMAGE:$APP_IMAGE_TAG"
-  local remoteTargetImage="$CONTAINER_REGISTRY/$APP_PROJECT/$targetImage"
+function push_docker_image() {
+  local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+  local remote_target_image="$CONTAINER_REGISTRY/$APP_PROJECT/$target_image"
 
   msg 'Pushing docker image ...'
 
-  runAs "$DOCKER_USER" "
+  run_as "$DOCKER_USER" "
   $DOCKER_CMD logout
   $DOCKER_CMD login --username '$DOCKER_LOGIN_USERNAME' --password-stdin < '$DOCKER_LOGIN_PASSWORD' '$CONTAINER_REGISTRY'
-  $DOCKER_CMD tag '$targetImage' '$remoteTargetImage'
-  $DOCKER_CMD push '$remoteTargetImage'
+  $DOCKER_CMD tag '$target_image' '$remote_target_image'
+  $DOCKER_CMD push '$remote_target_image'
   $DOCKER_CMD logout
 "
 }
