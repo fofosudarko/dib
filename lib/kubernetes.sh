@@ -149,12 +149,12 @@ EOF
     
     $KOMPOSE_CMD convert -f $changed_compose_file
     
-    if [[ \"$KUBERNETES_SERVICE_LABEL\" != \"io.kompose.service\" ]]
+    if [[ \"$K8S_SERVICE_LABEL\" != \"io.kompose.service\" ]]
     then
-      sed -i 's/io\.kompose\.service\:/${KUBERNETES_SERVICE_LABEL}:/g' *
+      sed -i 's/io\.kompose\.service\:/${K8S_SERVICE_LABEL}:/g' *
     fi
     
-    sed -i 's/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g' *configmap* 2> /dev/null
+    sed -i 's/${K8S_SERVICE_LABEL}\: ${APP_IMAGE}-/${K8S_SERVICE_LABEL}: /g' *configmap* 2> /dev/null
   }
 
   generate_kubernetes_manifests
@@ -167,6 +167,8 @@ EOF
 }
 
 function deploy_to_kubernetes() {
+  check_kompose_validity
+
   set_kubernetes_configs
   
   generate_kubernetes_manifests
@@ -183,7 +185,7 @@ function deploy_to_kubernetes() {
   }
 
   function kubernetes_deployments_exist() {
-    if $KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
+    if $KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $K8S_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
       grep -q $APP_IMAGE:$APP_IMAGE_TAG
     then
       return 0
@@ -193,7 +195,7 @@ function deploy_to_kubernetes() {
   }
 
   function kubernetes_deployments_scaled_to_zero() {
-    local deployments=\$($KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $KUBERNETES_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
+    local deployments=\$($KUBECTL_CMD get deployments -n $APP_KUBERNETES_NAMESPACE -l $K8S_SERVICE_LABEL=$APP_IMAGE -o wide --no-headers| \
       grep $APP_IMAGE:$APP_IMAGE_TAG| awk '{ print \$2; }')
 
     if [[ \"\$deployments\" == \"0/0\" ]]

@@ -27,16 +27,27 @@ function build_springboot_docker_image() {
     exit 1
   fi
 
+  add_springboot_application_properties
   add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
   add_springboot_keystores "$docker_file" "$DOCKER_APP_KEYSTORES_SRC" "$DOCKER_APP_KEYSTORES_DEST"
 
   run_as "$DOCKER_USER" "
-  sed -i 's/^spring\.profiles\.active\=.*/$springboot_app_profile/g' $application_properties_file
+  if [[ -f \"$application_properties_file\" ]]
+  then
+    sed -i 's/^spring\.profiles\.active\=.*/$springboot_app_profile/g' $application_properties_file
+  else
+    echo 'spring.profiles.active=$springboot_app_profile' 1> $application_properties_file
+  fi
+
   $DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST
+  
   exit \$?
 " || image_build_status=1
 
-  run_as "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
+  if [[ "$image_build_status" -ne 1 ]]
+  then
+    run_as "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
+  fi
 
   return "$image_build_status"
 }

@@ -10,6 +10,14 @@
 
 ## - start here
 
+function add_springboot_application_properties() {
+  run_as "$DOCKER_USER" "
+  [[ -d $SPRINGBOOT_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+  cp $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+  cp $SPRINGBOOT_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+"
+}
+
 function add_maven_wrapper_properties() {
   local maven_wrapper_properties_src="$1" maven_wrapper_properties_dest="$2"
 

@@ -1,38 +1,37 @@
 #!/bin/bash
 #
-# File: vars.sh -> common variables
+# File: variables.sh -> common variables
 #
 # (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
 #
-# Usage: source vars.sh
+# Usage: source variables.sh
 #
 #
 
 ## - start here
 
-# system commands
+# globals
 
-: ${DOCKER_CMD="$(which docker)"}
-: ${DOCKER_COMPOSE_CMD="$(which docker-compose)"}
-: ${KOMPOSE_CMD="$(which kompose)"}
-: ${KUBECTL_CMD="$(which kubectl)"}
-: ${NANO_CMD="$(which nano)"}
+: ${BUILD_DATE=`date +'%Y%m%d'`}
+: ${USE_GIT_COMMIT=${DIB_USE_GIT_COMMIT:-'false'}}
+: ${USE_BUILD_DATE=${DIB_USE_BUILD_DATE:-'false'}}
+: ${USE_SUDO=${DIB_USE_SUDO:-'false'}}
 
 # filters
 
 : ${DIB_RUN_COMMANDS='^(build|build\-push|build\-push\-deploy|push|deploy|doctor)$'}
 : ${DIB_APP_ENVIRONMENTS='^(development|staging|beta|production|demo|alpha)$'}
+: ${DIB_APP_FRAMEWORKS='^(springboot|angular|react|flask|express|mux|feathers|nuxt|next)$'}
+
+# templates
+
+: ${K8S_RESOURCE_ANNOTATION_TEMPLATE='@@K8S_RESOURCE_ANNOTATION@@'}
 
 # users
 
 : ${DOCKER_USER=${DIB_DOCKER_USER:-'docker'}}
 : ${CI_USER=${DIB_CI_USER:-'jenkins'}}
 : ${SUPER_USER=${DIB_SUPER_USER:-'root'}}
-
-# ci
-
-: ${CI_WORKSPACE=${DIB_CI_WORKSPACE:-'/var/lib/jenkins/workspace'}}
-: ${CI_JOB=${DIB_CI_JOB:-'example-service-job'}}
 
 # app
 
@@ -52,6 +51,11 @@
 : ${APP_NPM_BUILD_COMMAND_DELIMITER=${DIB_APP_NPM_BUILD_COMMAND_DELIMITER:-','}}
 : ${APP_REPO=${DIB_APP_REPO:-'example-service'}}
 
+# ci
+
+: ${CI_WORKSPACE=${DIB_CI_WORKSPACE:-'/var/lib/jenkins/workspace'}}
+: ${CI_JOB=${DIB_CI_JOB:-"${APP_IMAGE}-job"}}
+
 # dib
 
 : ${DIB_HOME=${DIB_HOME:-'/home/docker'}}
@@ -66,14 +70,14 @@
 : ${DOCKER_APPS_KEYSTORES_DIR="$DIB_HOME/keystores"}
 : ${DOCKER_APPS_COMPOSE_DIR="$DIB_HOME/compose"}
 : ${DOCKER_APPS_ENV_DIR="$DIB_HOME/env"}
-: ${DOCKER_APPS_KUBERNETES_ANNOTATIONS_DIR="$DIB_HOME/k8s-annotations"}
-: ${DOCKER_APPS_KUBERNETES_DIR="$DIB_HOME/.kube"}
+: ${DOCKER_APPS_K8S_ANNOTATIONS_DIR="$DIB_HOME/k8s-annotations"}
+: ${DOCKER_APPS_K8S_DIR="$DIB_HOME/.kube"}
 : ${DOCKER_APP_BUILD_SRC="$CI_WORKSPACE/$CI_JOB"}
 : ${DOCKER_APP_BUILD_DEST="$DOCKER_APPS_DIR/$APP_FRAMEWORK/$APP_ENVIRONMENT/$CI_JOB"}
 : ${DOCKER_APP_CONFIG_DIR="$DOCKER_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_ENVIRONMENT/$CI_JOB"}
 : ${DOCKER_APP_COMPOSE_DIR="$DOCKER_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_ENVIRONMENT/$CI_JOB"}
 : ${DOCKER_APP_COMPOSE_K8S_DIR="$DOCKER_APP_COMPOSE_DIR/kubernetes"}
-: ${DOCKER_APP_K8S_ANNOTATIONS_DIR="$DOCKER_APPS_KUBERNETES_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_ENVIRONMENT/$CI_JOB"}
+: ${DOCKER_APP_K8S_ANNOTATIONS_DIR="$DOCKER_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_ENVIRONMENT/$CI_JOB"}
 : ${DOCKER_APP_BUILD_FILES="$DOCKER_APP_CONFIG_DIR/*{Dockerfile,docker-compose}*"}
 : ${DOCKER_APP_KEYSTORES_SRC="$DIB_HOME/keystores/$APP_PROJECT/$APP_ENVIRONMENT/keystores"}
 : ${DOCKER_APP_KEYSTORES_DEST="$DOCKER_APP_BUILD_DEST"}
@@ -92,6 +96,11 @@
 : ${DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY="${DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE}.copy"}
 : ${DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE="$DOCKER_APP_CONFIG_DIR/docker-compose.template.yml"}
 : ${DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY="${DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE}.copy"}
+: ${DOCKER_APP_K8S_ANNOTATIONS_CHANGED_FILE="$DOCKER_APP_K8S_ANNOTATIONS_DIR/$K8S_RESOURCE_ANNOTATION_TEMPLATE.k8s-annotations.changed"}
+: ${DOCKER_APP_K8S_ANNOTATIONS_CHANGED_FILE_COPY="${DOCKER_APP_K8S_ANNOTATIONS_CHANGED_FILE}.copy"}
+: ${DOCKER_APP_CONFIG_DOCKER_FILE="$DOCKER_APP_CONFIG_DIR/Dockerfile"}
+: ${DOCKER_APP_CONFIG_DOCKER_FILE_COPY="${DOCKER_APP_CONFIG_DOCKER_FILE}.copy"}
+: ${DOCKERFILE="$DOCKER_APP_BUILD_DEST/Dockerfile"}
 
 # kompose
 
@@ -104,9 +113,9 @@
 
 # kubernetes
 
-: ${KUBE_HOME=${KUBE_HOME:-${DOCKER_APPS_KUBERNETES_DIR}}}
+: ${KUBE_HOME=${KUBE_HOME:-${DOCKER_APPS_K8S_DIR}}}
 : ${KUBECONFIGS=${DIB_KUBECONFIGS:-'microk8s-config'}}
-: ${KUBERNETES_SERVICE_LABEL=${DIB_KUBERNETES_SERVICE_LABEL:-'io.kompose.service'}}
+: ${K8S_SERVICE_LABEL=${DIB_K8S_SERVICE_LABEL:-'io.kompose.service'}}
 : ${CONTAINER_REGISTRY=${DIB_CONTAINER_REGISTRY:-'hub.docker.com'}}
 
 # springboot
@@ -114,15 +123,8 @@
 : ${SPRINGBOOT_APPLICATION_PROPERTIES_DIR="$DOCKER_APP_BUILD_DEST/src/main/resources"}
 : ${SPRINGBOOT_BASE_APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application.properties"}
 : ${SPRINGBOOT_APPLICATION_PROPERTIES="$DOCKER_APP_CONFIG_DIR/application-docker.properties"}
+: ${SPRINGBOOT_APPLICATION_PROPERTIES_COPY="${SPRINGBOOT_APPLICATION_PROPERTIES}.copy"}
 : ${MAVEN_WRAPPER_PROPERTIES_SRC="${DOCKER_APPS_CONFIG_DIR}/${APP_FRAMEWORK}/maven-wrapper/"}
 : ${MAVEN_WRAPPER_PROPERTIES_DEST="$DOCKER_APP_BUILD_DEST"}
-
-# globals
-
-: ${BUILD_DATE=`date +'%Y%m%d'`}
-: ${USE_GIT_COMMIT=${DIB_USE_GIT_COMMIT:-'false'}}
-: ${USE_BUILD_DATE=${DIB_USE_BUILD_DATE:-'false'}}
-: ${USE_SUDO=${DIB_USE_SUDO:-'false'}}
-: ${DOCKERFILE="$DOCKER_APP_BUILD_DEST/Dockerfile"}
 
 ## -- finish

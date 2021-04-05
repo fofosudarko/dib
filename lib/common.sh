@@ -19,7 +19,7 @@ function run_as() {
   then
     sudo su "$1" -c "$2"
   else
-    su "$1" -c "$2"
+    $SHELL_CMD -c "$2"
   fi
 }
 
@@ -36,12 +36,12 @@ function copy_docker_project() {
 
 function copy_docker_build_files() { 
   local build_files="$1" docker_project="$2"
-  local docker_compose_template="$DOCKER_APP_CONFIG_DIR/docker-compose.template.yml"
-  local docker_compose_file="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
+  local docker_compose_template="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+  local docker_compose_out="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
 
   if [ -s "$docker_compose_template" ]
   then
-    format_docker_compose_template "$docker_compose_template" "$docker_compose_file"
+    format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
   fi
 
   msg 'Copying docker build files ...'
@@ -49,6 +49,14 @@ function copy_docker_build_files() {
   run_as "$DOCKER_USER" "
   rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project 2> /dev/null
 "
+}
+
+function copy_config_files() {
+  local config_dir="$1" app_build_destination="$2"
+
+  msg 'Copying configuration files ...'
+  
+  run_as "$DOCKER_USER" "rsync -av $config_dir/ $app_build_destination"
 }
 
 function format_docker_compose_template() {
@@ -121,16 +129,16 @@ function create_default_directories_if_not_exist() {
     ${DOCKER_APP_COMPOSE_DIR}
     ${DOCKER_APP_COMPOSE_K8S_DIR}
     ${DOCKER_APP_KEYSTORES_SRC}
-    ${MAVEN_WRAPPER_PROPERTIES_SRC}
     ${DOCKER_APP_K8S_ANNOTATIONS_DIR}
     ${DOCKER_APP_COMMON_ENV_DIR}
     ${DOCKER_APP_PROJECT_ENV_DIR}
     ${DOCKER_APP_SERVICE_ENV_DIR}
+    ${MAVEN_WRAPPER_PROPERTIES_SRC}
   )
 
   for defaultDir in \${defaultDirs[@]}
   do
-    [[ ! -d \"\$defaultDir\" ]] && mkdir -p \"\$defaultDir\"
+    [[ -d \"\$defaultDir\" ]] || mkdir -p \"\$defaultDir\"
   done
 "
 }
@@ -310,6 +318,51 @@ function check_app_dependencies() {
     Oops, nano command not found! 
     Please install and continue since this command helps you to edit some files as your default editor.'
   fi
+
+  if [[ -x "$SHELL_CMD" ]] 
+  then
+    msg 'bash already installed successfully.'
+  else
+    msg '
+    Oops, bash command not found! 
+    Please install and continue since this command helps you to run system commands.'
+  fi
+}
+
+function check_kompose_validity() {
+  if ! is_kompose_version_valid
+  then
+    msg "Invalid kompose command version. Please upgrade to a version greater than 1.20.x"
+    exit 1
+  fi
+}
+
+function check_run_command_validity() {
+  if [[ -z "$DIB_RUN_COMMAND" ]] || ! echo -ne "$DIB_RUN_COMMAND"| grep -qE "$DIB_RUN_COMMANDS"
+  then
+    msg "Run command must be in $DIB_RUN_COMMANDS"
+    exit 1
+  fi
+}
+
+function check_app_environment_validity() {
+  if [[ -z "$APP_ENVIRONMENT" ]] || ! echo -ne "$APP_ENVIRONMENT"| grep -qE "$DIB_APP_ENVIRONMENTS"
+  then
+    msg "App environment must be in $DIB_APP_ENVIRONMENTS"
+    exit 1
+  fi
+}
+
+function check_app_framework_validity() {
+  if [[ -z "$APP_FRAMEWORK" ]] || ! echo -ne "$APP_FRAMEWORK"| grep -qE "$DIB_APP_FRAMEWORKS"
+  then
+    msg "App framework must be in $DIB_APP_FRAMEWORKS"
+    exit 1
+  fi
+}
+
+function show_help() {
+  msg "This is a help message"
 }
 
 ## -- finish
