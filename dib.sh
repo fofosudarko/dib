@@ -7,7 +7,7 @@
 # Usage: bash dib.sh DIB_RUN_COMMAND CI_JOB APP_PROJECT APP_ENVIRONMENT APP_FRAMEWORK APP_IMAGE 
 #   ENV_VARS: APP_IMAGE_TAG APP_KUBERNETES_NAMESPACE APP_DB_CONNECTION_POOL
 #             APP_KUBERNETES_CONTEXT APP_BUILD_MODE APP_NPM_RUN_COMMANDS KUBECONFIGS
-#             K8S_SERVICE_LABEL USE_GIT_COMMIT USE_BUILD_DATE
+#             KUBERNETES_SERVICE_LABEL USE_GIT_COMMIT USE_BUILD_DATE
 #
 #
 
@@ -19,31 +19,22 @@ set -eu
 : ${LIB_DIR="${SCRIPT_DIR}/lib"}
 
 function load_common_functions() {  
-  test -f "$LIB_DIR/common.sh" || exit 1
   source "$LIB_DIR/common.sh"
 }
 
 function load_system_commands() {  
-  test -f "$LIB_DIR/system_commands.sh" || exit 1
   source "$LIB_DIR/system_commands.sh"
 }
 
 function load_variables() {  
-  test -f "$LIB_DIR/variables.sh" || exit 1
   source "$LIB_DIR/variables.sh"
 }
 
 function load_more_functions() {
-  if test ! -f "$LIB_DIR/springboot.sh" || \
-     test ! -f "$LIB_DIR/docker.sh" || \
-     test ! -f "$LIB_DIR/kubernetes.sh"
-  then
-    exit 1
-  fi
-
   source "$LIB_DIR/springboot.sh"
   source "$LIB_DIR/docker.sh"
   source "$LIB_DIR/kubernetes.sh"
+  source "$LIB_DIR/editor.sh"
 }
 
 load_system_commands
@@ -72,6 +63,7 @@ then
   shift
 fi
 
+DIB_HOME=${DIB_HOME/\~/$HOME}
 DIB_APP_IMAGE_TAG=
 DIB_FILE_TYPE=
 DIB_FILE_RESOURCE=
@@ -150,10 +142,10 @@ then
   deploy_to_kubernetes
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
-  :
+  parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
-  :
+  parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 else
   msg "Run command '$DIB_RUN_COMMAND' unknown"
   exit 1
