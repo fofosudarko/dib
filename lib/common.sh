@@ -15,7 +15,12 @@ function msg() {
 }
 
 function run_as() {
-  sudo su "$1" -c "$2"
+  if [[ "$USE_SUDO" = "true" ]]
+  then
+    sudo su "$1" -c "$2"
+  else
+    su "$1" -c "$2"
+  fi
 }
 
 function copy_docker_project() {
@@ -58,7 +63,18 @@ function format_docker_compose_template() {
       -e 's/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
       -e 's/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
       -e 's/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
-      -e 's/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g' '$docker_compose_template' 1> '$docker_compose_out'
+      -e 's/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g' \
+      -e 's/@@DIB_KOMPOSE_IMAGE_PULL_SECRET@@/${KOMPOSE_IMAGE_PULL_SECRET}/g' \
+      -e 's/@@DIB_KOMPOSE_IMAGE_PULL_POLICY@@/${KOMPOSE_IMAGE_PULL_POLICY}/g' \
+      -e 's/@@DIB_KOMPOSE_SERVICE_TYPE@@/${KOMPOSE_SERVICE_TYPE}/g' \
+      -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE@@/${KOMPOSE_SERVICE_EXPOSE}/g' \
+      -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET@@/${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET}/g' \
+      -e 's/@@DIB_KOMPOSE_SERVICE_NODEPORT_PORT@@/${KOMPOSE_SERVICE_NODEPORT_PORT}/g' \
+      -e 's/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF}/g' \
+      -e 's/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL}/g' \
+      -e 's/@@DIB_APP_BUILD_CONFIGURATION@@/${APP_BUILD_CONFIGURATION}/g' \
+      -e 's/@@DIB_APP_REPO@@/${APP_REPO}/g' \
+      -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
   fi
 }
@@ -154,7 +170,7 @@ function set_app_frontend_build_mode() {
 }
 
 function get_app_image_tag() {
-  local app_image_tag=${APP_IMAGE_TAG}
+  local app_image_tag="${1:-'latest'}"
 
   if [[ "$USE_GIT_COMMIT" = "true" ]] && [[ -n "$GIT_COMMIT" ]]
   then
@@ -174,10 +190,7 @@ function get_app_image_tag() {
     production) app_image_tag="prod-${app_image_tag}";;
     demo) app_image_tag="demo-${app_image_tag}";;
     alpha) app_image_tag="alpha-${app_image_tag}";;
-    *)
-      msg "app environment '$APP_ENVIRONMENT' unknown"
-      exit 1
-    ;;
+    *) app_image_tag="${app_image_tag}";;
   esac
 
   printf '%s' $app_image_tag
