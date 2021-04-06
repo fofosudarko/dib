@@ -164,11 +164,11 @@ function push_docker_image() {
   msg 'Pushing docker image ...'
 
   run_as "$DOCKER_USER" "
-  $DOCKER_CMD logout
+  $DOCKER_CMD logout 2> /dev/null
   $DOCKER_CMD login --username '$DOCKER_LOGIN_USERNAME' --password-stdin < '$DOCKER_LOGIN_PASSWORD' '$DOCKER_APPS_CONTAINER_REGISTRY'
   $DOCKER_CMD tag '$target_image' '$remote_target_image'
   $DOCKER_CMD push '$remote_target_image'
-  $DOCKER_CMD logout
+  $DOCKER_CMD logout 2> /dev/null
 "
 }
 

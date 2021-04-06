@@ -52,15 +52,10 @@ function copy_docker_build_files() {
   local build_files="$1" docker_project="$2"
   local docker_compose_template="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
   local docker_compose_out="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
-
-  if [ -s "$docker_compose_template" ]
-  then
-    format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
-  else
-    touch "$docker_compose_out"
-  fi
-
+  
   msg 'Copying docker build files ...'
+
+  format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
   
   run_as "$DOCKER_USER" "rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project"
 }
@@ -98,6 +93,8 @@ function format_docker_compose_template() {
       -e 's/@@DIB_APP_REPO@@/${APP_REPO}/g' \
       -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
+  else
+    run_as "$DOCKER_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
   fi
 }
 
