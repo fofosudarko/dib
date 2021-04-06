@@ -85,7 +85,8 @@ if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "build-push" ]] || \
    [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]] || \
    [[ "$DIB_RUN_COMMAND" == "push" ]] || \
-   [[ "$DIB_RUN_COMMAND" == "deploy" ]]
+   [[ "$DIB_RUN_COMMAND" == "deploy" ]] || \
+   [[ "$DIB_RUN_COMMAND" == "k8s-generate" ]]
 then
   [[ "$#" -ge 1 ]] && DIB_APP_IMAGE_TAG="$1"
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
@@ -148,6 +149,12 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "deploy" ]]
 then
   deploy_to_kubernetes
+elif [[ "$DIB_RUN_COMMAND" == "k8s-generate" ]]
+then
+  if generate_kubernetes_manifests
+  then
+    msg "The kubernetes manifests can be found here: $DOCKER_APP_COMPOSE_K8S_DIR"
+  fi
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
   parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"

@@ -34,7 +34,7 @@ function get_kubernetes_contexts() {
 function generate_kubernetes_manifests() {
   
   function docker_compose_file_changed() {
-    return "$(detect_file_changed "$original_compose_file" "$changed_compose_file")"
+    return $(detect_file_changed "$original_compose_file" "$changed_compose_file")
   }
   
   msg 'Generating Kubernetes manifests ...'
@@ -63,7 +63,6 @@ function generate_kubernetes_manifests() {
   fi
   
   run_as "$DOCKER_USER" "
-  
   function get_kubernetes_resources_annotations() {
     dir -1 $DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed 2> /dev/null
   }
@@ -141,8 +140,7 @@ EOF
     fi
   }
 
-  generate_kubernetes_manifests ()
-  {
+  function generate_kubernetes_manifests() {
     [[ -d \"$DOCKER_APP_COMPOSE_K8S_DIR\" ]] || mkdir -p \"$DOCKER_APP_COMPOSE_K8S_DIR\"
     
     cd $DOCKER_APP_COMPOSE_K8S_DIR
@@ -151,16 +149,19 @@ EOF
     
     if [[ \"$KUBERNETES_SERVICE_LABEL\" != \"io.kompose.service\" ]]
     then
-      sed -i 's/io\.kompose\.service\:/${KUBERNETES_SERVICE_LABEL}:/g' *
+      sed -i'.sed-backup' -E 's/io\.kompose\.service\:/${KUBERNETES_SERVICE_LABEL}:/g' *
     fi
     
-    sed -i 's/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g' *configmap* 2> /dev/null
+    sed -i'.sed-backup' -E 's/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g' *configmap* 2> /dev/null
+
+    rm -f *sed-backup 2> /dev/null
   }
 
   generate_kubernetes_manifests
   update_kubernetes_resources_with_annotations
   cp $changed_compose_file $original_compose_file
 "
+  
   return 0
 }
 
@@ -172,7 +173,6 @@ function deploy_to_kubernetes() {
   while IFS=$'\n' read -r kubernetes_context
   do
     run_as "$SUPER_USER" "
-
   function create_kubernetes_namespace_if_not_exists() {
     if ! $KUBECTL_CMD get namespaces --all-namespaces -o wide --no-headers| grep -q $APP_KUBERNETES_NAMESPACE
     then

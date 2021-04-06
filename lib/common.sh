@@ -87,11 +87,13 @@ function format_docker_compose_template() {
       -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE@@/${KOMPOSE_SERVICE_EXPOSE}/g' \
       -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET@@/${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET}/g' \
       -e 's/@@DIB_KOMPOSE_SERVICE_NODEPORT_PORT@@/${KOMPOSE_SERVICE_NODEPORT_PORT}/g' \
-      -e 's/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF}/g' \
-      -e 's/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL}/g' \
+      -e 's/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF/\//\\/}/g' \
+      -e 's/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL/\//\\/}/g' \
       -e 's/@@DIB_APP_BUILD_CONFIGURATION@@/${APP_BUILD_CONFIGURATION}/g' \
       -e 's/@@DIB_APP_REPO@@/${APP_REPO}/g' \
-      -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' '$docker_compose_template' 1> '$docker_compose_out'
+      -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' \
+      -e 's/@@DIB_DOCKER_COMPOSE_NETWORK_MODE@@/${DOCKER_COMPOSE_NETWORK_MODE}/g' \
+      -e 's/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
   else
     run_as "$DOCKER_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
@@ -118,6 +120,11 @@ function update_env_file() {
 
 function detect_file_changed() {
   local original_file="$1" changed_file="$2"
+
+  if [[ ! -f "$original_file" || ! -f "$changed_file" ]]
+  then
+    return 0
+  fi
 
   if [[ "$(diff $original_file $changed_file 2> /dev/null| wc -l)" -eq 0 ]]
   then
