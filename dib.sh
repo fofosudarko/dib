@@ -37,6 +37,12 @@ function load_more_functions() {
   source "$LIB_DIR/editor.sh"
 }
 
+function load_rc_file() {
+  source "$LIB_DIR/rc_path.sh"
+
+  [[ -f "$DIB_RC_FILE" ]] && import_envvars_from_rc_file "$DIB_RC_FILE"
+}
+
 load_system_commands
 load_common_functions
 
@@ -107,8 +113,10 @@ then
   exit 0
 fi
 
+load_rc_file
 load_variables
 load_more_functions
+
 check_app_framework_validity
 check_app_environment_validity
 create_default_directories_if_not_exist
@@ -116,7 +124,7 @@ create_default_directories_if_not_exist
 case "$DIB_RUN_COMMAND"
 in
   build|build-push|build-push-deploy)
-    copy_docker_project "$DOCKER_APP_BUILD_SRC" "$(dirname $DOCKER_APP_BUILD_DEST)"
+    copy_docker_project "$DOCKER_APP_BUILD_SRC" "$DOCKER_APP_BUILD_DEST"
     copy_docker_build_files "$DOCKER_APP_BUILD_FILES" "$DOCKER_APP_BUILD_DEST"
     copy_config_files "$DOCKER_APP_CONFIG_DIR" "$DOCKER_APP_BUILD_DEST"
   ;;

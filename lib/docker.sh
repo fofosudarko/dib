@@ -11,9 +11,7 @@
 ## - start here
 
 function build_springboot_docker_image() {
-  local application_properties_file="$1"
-  local springboot_app_profile="spring.profiles.active=docker"
-  local docker_file="$DOCKERFILE"
+  local docker_file="$DOCKER_FILE"
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
   local image_build_status=0
 
@@ -31,41 +29,25 @@ function build_springboot_docker_image() {
   add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
   add_springboot_keystores "$docker_file" "$DOCKER_APP_KEYSTORES_SRC" "$DOCKER_APP_KEYSTORES_DEST"
 
-  run_as "$DOCKER_USER" "
-  if [[ -f \"$application_properties_file\" ]]
-  then
-    sed -i 's/^spring\.profiles\.active\=.*/$springboot_app_profile/g' $application_properties_file
-  else
-    echo 'spring.profiles.active=$springboot_app_profile' 1> $application_properties_file
-  fi
-
-  $DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST
-  
-  exit \$?
-" || image_build_status=1
-
-  if [[ "$image_build_status" -ne 1 ]]
-  then
-    run_as "$DOCKER_USER" "cp -a $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR 2> /dev/null"
-  fi
+  run_as "$DOCKER_USER" "$DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST; exit \$?" || image_build_status=1
 
   return "$image_build_status"
 }
 
 function build_docker_image_from_compose_file() {
-  local docker_file="$DOCKERFILE"
+  local docker_file="$DOCKER_FILE"
   local docker_compose_file="$DOCKER_APP_BUILD_DEST/docker-compose.yml"
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
   local image_build_status=0
 
   run_as "$DOCKER_USER" "
-  if [[ ! -f \"$docker_file\" ]]
+  if [[ ! -f '$docker_file' ]]
   then
     echo $COMMAND: no Dockerfile found
     exit 1
   fi
 
-  if [[ ! -f \"$docker_compose_file\" ]]
+  if [[ ! -f '$docker_compose_file' ]]
   then
     echo $COMMAND: no docker compose file found
     exit 1
@@ -80,12 +62,12 @@ function build_docker_image_from_compose_file() {
 }
 
 function build_docker_image_from_file() {
-  local docker_file="$DOCKERFILE"
+  local docker_file="$DOCKER_FILE"
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
   local image_build_status=0
 
   run_as "$DOCKER_USER" "
-  if [[ ! -f \"$docker_file\" ]]
+  if [[ ! -f '$docker_file' ]]
   then
     echo $COMMAND: no Dockerfile found
     exit 1
@@ -94,10 +76,7 @@ function build_docker_image_from_file() {
   exit 0
 " || exit 1
 
-  run_as "$DOCKER_USER" " 
-  $DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST
-  exit \$?
-  " || image_build_status=1
+  run_as "$DOCKER_USER" "$DOCKER_CMD build -t '$target_image' $DOCKER_APP_BUILD_DEST; exit \$?" || image_build_status=1
 
   return "$image_build_status"
 }
@@ -145,7 +124,7 @@ function build_mux_docker_image() {
 function build_docker_image() {
   case "$APP_FRAMEWORK" in
     springboot)
-      build_springboot_docker_image "$SPRINGBOOT_APPLICATION_PROPERTIES_DIR/application.properties"
+      build_springboot_docker_image
     ;;
     angular)
       build_angular_docker_image
@@ -180,13 +159,13 @@ function build_docker_image() {
 
 function push_docker_image() {
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
-  local remote_target_image="$CONTAINER_REGISTRY/$APP_PROJECT/$target_image"
+  local remote_target_image="$DOCKER_APPS_CONTAINER_REGISTRY/$APP_PROJECT/$target_image"
 
   msg 'Pushing docker image ...'
 
   run_as "$DOCKER_USER" "
   $DOCKER_CMD logout
-  $DOCKER_CMD login --username '$DOCKER_LOGIN_USERNAME' --password-stdin < '$DOCKER_LOGIN_PASSWORD' '$CONTAINER_REGISTRY'
+  $DOCKER_CMD login --username '$DOCKER_LOGIN_USERNAME' --password-stdin < '$DOCKER_LOGIN_PASSWORD' '$DOCKER_APPS_CONTAINER_REGISTRY'
   $DOCKER_CMD tag '$target_image' '$remote_target_image'
   $DOCKER_CMD push '$remote_target_image'
   $DOCKER_CMD logout

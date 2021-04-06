@@ -13,7 +13,6 @@
 function add_springboot_application_properties() {
   run_as "$DOCKER_USER" "
   [[ -d $SPRINGBOOT_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
-  cp $SPRINGBOOT_BASE_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
   cp $SPRINGBOOT_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
 "
 }
@@ -21,16 +20,23 @@ function add_springboot_application_properties() {
 function add_maven_wrapper_properties() {
   local maven_wrapper_properties_src="$1" maven_wrapper_properties_dest="$2"
 
-  run_as "$DOCKER_USER" "rsync -av $maven_wrapper_properties_src $maven_wrapper_properties_dest"
+  run_as "$DOCKER_USER" "
+  if [[ ! -d '${DOCKER_APP_BUILD_DEST}/.mvn/wrapper' ]]
+  then
+    rsync -av $maven_wrapper_properties_src $maven_wrapper_properties_dest
+  fi
+"
 }
 
 function add_springboot_keystores() {
   local docker_file="$1" keystores_src="$2" keystores_dest="$3"
-  
-  if grep -qE 'keystores' "$docker_file" 2> /dev/null
-  then
-    run_as "$DOCKER_USER" "rsync -av $keystores_src $keystores_dest"
-  fi
+
+  run_as "$DOCKER_USER" "
+    if grep -qE 'keystores' '$docker_file' 2> /dev/null
+    then
+      rsync -av $keystores_src $keystores_dest
+    fi
+  "
 }
 
 ## -- finish

@@ -23,14 +23,28 @@ function run_as() {
   fi
 }
 
+function extract_exclude_patterns() {
+  grep -vE '^(\#|\!)' "$1" | grep -v '^$' | sed -e 's/^/--exclude="/' -e 's/$/"/g'| tr '\n' ' '
+}
+
 function copy_docker_project() {
-  local ci_project="$1" docker_project="$2"
+  local ci_project="$1" docker_project="$2" gitignore_patterns= hgignore_patterns=
 
   msg 'Copying docker project ...'
+
+  if [[ -f "$ci_project/.gitignore" ]]
+  then
+    gitignore_patterns="$(extract_exclude_patterns "$ci_project/.gitignore")"
+  fi
+
+  if [[ -f "$ci_project/.hgignore" ]]
+  then
+    hgignore_patterns="$(extract_exclude_patterns "$ci_project/.hgignore")"
+  fi
   
   run_as "$DOCKER_USER" "
   rm -rf $docker_project/*
-  rsync -av --exclude='.git/' $ci_project $docker_project
+  rsync -av --exclude='.git/' $gitignore_patterns $hgignore_patterns $ci_project/ $docker_project
 "
 }
 
@@ -42,21 +56,21 @@ function copy_docker_build_files() {
   if [ -s "$docker_compose_template" ]
   then
     format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
+  else
+    touch "$docker_compose_out"
   fi
 
   msg 'Copying docker build files ...'
   
-  run_as "$DOCKER_USER" "
-  rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project 2> /dev/null
-"
+  run_as "$DOCKER_USER" "rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project"
 }
 
 function copy_config_files() {
-  local config_dir="$1" app_build_destination="$2"
+  local config_dir="$1" app_build_dest="$2"
 
   msg 'Copying configuration files ...'
   
-  run_as "$DOCKER_USER" "rsync -av $config_dir/ $app_build_destination"
+  run_as "$DOCKER_USER" "rsync -av $config_dir/ $app_build_dest"
 }
 
 function format_docker_compose_template() {
@@ -67,7 +81,7 @@ function format_docker_compose_template() {
     run_as "$DOCKER_USER" "
       sed -e 's/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g' \
       -e 's/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g' \
-      -e 's/@@DIB_CONTAINER_REGISTRY@@/${CONTAINER_REGISTRY}/g' \
+      -e 's/@@DIB_CONTAINER_REGISTRY@@/${DOCKER_APPS_CONTAINER_REGISTRY}/g' \
       -e 's/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
       -e 's/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
       -e 's/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
@@ -108,12 +122,12 @@ function update_env_file() {
 function detect_file_changed() {
   local original_file="$1" changed_file="$2"
 
-  if [[ "$(diff $original_file $changed_file 2> /dev/null| wc -l)" -ne 0 ]]
+  if [[ "$(diff $original_file $changed_file 2> /dev/null| wc -l)" -eq 0 ]]
   then
-    return 0
+    return 1
   fi
 
-  return 1
+  return 0
 }
 
 function abort_build_process() {
@@ -163,10 +177,10 @@ function set_app_frontend_build_mode() {
   case "$APP_BUILD_MODE"
   in
     spa)
-      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKERFILE"
+      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE"
     ;;
     universal)
-      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKERFILE"
+      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE"
     ;;
     *)
       msg "app build mode '$APP_BUILD_MODE' unknown"
@@ -364,5 +378,15 @@ function check_app_framework_validity() {
 function show_help() {
   msg "This is a help message"
 }
+
+function import_envvars_from_rc_file() {
+  local rc_file="$1" tmp_location=$(mktemp)
+
+  sed '/^export/!s/^/export /g' "$rc_file" 1> "$tmp_location"
+
+  source "$tmp_location" && rm -f "$tmp_location"
+}
+
+
 
 ## -- finish
