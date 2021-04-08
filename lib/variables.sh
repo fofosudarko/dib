@@ -24,7 +24,7 @@
 
 : ${DIB_RUN_COMMANDS='^(build|build\-push|build\-push\-deploy|push|deploy|doctor)$'}
 : ${DIB_APP_ENVIRONMENTS='^(development|staging|beta|production|demo|alpha)$'}
-: ${DIB_APP_FRAMEWORKS='^(springboot|angular|react|flask|express|mux|feathers|nuxt|next)$'}
+: ${DIB_APP_FRAMEWORKS='^(springboot|angular|react|flask|express|mux|feathers|nuxt|next|example\-framework)$'}
 
 # templates
 
@@ -39,7 +39,7 @@
 # app
 
 : ${APP_PROJECT=${DIB_APP_PROJECT:-'example-project'}}
-: ${APP_FRAMEWORK=${DIB_APP_FRAMEWORK:-''}}
+: ${APP_FRAMEWORK=${DIB_APP_FRAMEWORK:-'example-framework'}}
 : ${APP_ENVIRONMENT=${DIB_APP_ENVIRONMENT:-'development'}}
 : ${APP_IMAGE=${DIB_APP_IMAGE:-'example-service'}}
 : ${APP_IMAGE_TAG=${DIB_APP_IMAGE_TAG:-"$(get_app_image_tag "$DIB_APP_IMAGE_TAG")"}}
@@ -109,15 +109,6 @@
 : ${DOCKER_APP_CONFIG_RUN_SCRIPT_COPY="${DOCKER_APP_CONFIG_RUN_SCRIPT}.copy"}
 : ${DOCKER_FILE="$DOCKER_APP_BUILD_DEST/Dockerfile"}
 
-# kompose
-
-: ${KOMPOSE_IMAGE_PULL_SECRET=${DIB_KOMPOSE_IMAGE_PULL_SECRET:-'your-builder-script'}}
-: ${KOMPOSE_IMAGE_PULL_POLICY=${DIB_KOMPOSE_IMAGE_PULL_POLICY:-'Always'}}
-: ${KOMPOSE_SERVICE_TYPE=${DIB_KOMPOSE_SERVICE_TYPE:-'nodeport'}}
-: ${KOMPOSE_SERVICE_EXPOSE=${DIB_KOMPOSE_SERVICE_EXPOSE:-'service-test.example.com'}}
-: ${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET=${DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET:-'example-service-staging'}}
-: ${KOMPOSE_SERVICE_NODEPORT_PORT=${DIB_KOMPOSE_SERVICE_NODEPORT_PORT:-'5000'}}
-
 # docker-compose
 
 : ${DOCKER_COMPOSE_NETWORK_MODE=${DIB_DOCKER_COMPOSE_NETWORK_MODE:-'host'}}
@@ -127,6 +118,14 @@
 : ${DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT=${DIB_DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT:-'10s'}}
 : ${DOCKER_COMPOSE_HEALTHCHECK_RETRIES=${DIB_DOCKER_COMPOSE_HEALTHCHECK_RETRIES:-3}}
 
+# kompose
+
+: ${KOMPOSE_IMAGE_PULL_SECRET=${DIB_KOMPOSE_IMAGE_PULL_SECRET:-'your-builder-script'}}
+: ${KOMPOSE_IMAGE_PULL_POLICY=${DIB_KOMPOSE_IMAGE_PULL_POLICY:-'Always'}}
+: ${KOMPOSE_SERVICE_TYPE=${DIB_KOMPOSE_SERVICE_TYPE:-'nodeport'}}
+: ${KOMPOSE_SERVICE_EXPOSE=${DIB_KOMPOSE_SERVICE_EXPOSE:-'service-test.example.com'}}
+: ${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET=${DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET:-'example-service-staging'}}
+: ${KOMPOSE_SERVICE_NODEPORT_PORT=${DIB_KOMPOSE_SERVICE_NODEPORT_PORT:-'5000'}}
 
 # kubernetes
 

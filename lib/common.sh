@@ -383,6 +383,123 @@ function import_envvars_from_rc_file() {
   source "$tmp_location" && rm -f "$tmp_location"
 }
 
+function parse_env_command() {
+  local env_type="$1"
 
+  case "$env_type"
+  in
+    all) 
+      get_all_envvars
+    ;;
+    globals) 
+      get_globals_envvars
+    ;;
+    users) 
+      get_users_envvars
+    ;;
+    app) 
+      get_app_envvars
+    ;;
+    docker) 
+      get_docker_envvars
+    ;;
+    kompose) 
+      get_kompose_envvars
+    ;;
+    kubernetes) 
+      get_kubernetes_envvars
+    ;;
+    *)
+      get_all_envvars
+    ;;
+  esac
+}
+
+function get_all_envvars() {
+  get_globals_envvars
+  echo
+  get_users_envvars
+  echo
+  get_app_envvars
+  echo
+  get_docker_envvars
+  echo
+  get_kompose_envvars
+  echo
+  get_kubernetes_envvars
+}
+
+function get_globals_envvars() {
+  cat <<EOF
+  DIB_HOME => $DIB_HOME
+  DIB_USE_GIT_COMMIT => $USE_GIT_COMMIT
+  DIB_USE_BUILD_DATE => $USE_BUILD_DATE
+  DIB_USE_SUDO => $USE_SUDO
+  DIB_CI_WORKSPACE => $CI_WORKSPACE
+  DIB_CI_JOB => $CI_JOB
+EOF
+}
+
+function get_users_envvars() {
+  cat <<EOF
+  DIB_DOCKER_USER => $DOCKER_USER
+  DIB_CI_USER => $CI_USER
+  DIB_SUPER_USER => $SUPER_USER
+EOF
+}
+
+function get_app_envvars() {
+  cat <<EOF
+  DIB_APP_PROJECT => $APP_PROJECT
+  DIB_APP_FRAMEWORK => $APP_FRAMEWORK
+  DIB_APP_ENVIRONMENT => $APP_ENVIRONMENT
+  DIB_APP_IMAGE_TAG => $APP_IMAGE_TAG
+  DIB_APP_KUBERNETES_NAMESPACE => $APP_KUBERNETES_NAMESPACE
+  DIB_APP_DB_CONNECTION_POOL => $APP_DB_CONNECTION_POOL
+  DIB_APP_KUBERNETES_CONTEXT => $APP_KUBERNETES_CONTEXT
+  DIB_APP_BUILD_MODE => $APP_BUILD_MODE
+  DIB_APP_NPM_RUN_COMMANDS => $APP_NPM_RUN_COMMANDS
+  DIB_APP_BASE_HREF => $APP_BASE_HREF
+  DIB_APP_DEPLOY_URL => $APP_DEPLOY_URL
+  DIB_APP_BUILD_CONFIGURATION => $APP_BUILD_CONFIGURATION
+  DIB_APP_NPM_BUILD_COMMAND_DELIMITER => $APP_NPM_BUILD_COMMAND_DELIMITER
+  DIB_APP_REPO => $APP_REPO
+  DIB_APP_PORT => $APP_PORT
+  DIB_APP_BUILD_SRC => $DOCKER_APP_BUILD_SRC
+EOF
+}
+
+function get_docker_envvars() {
+  cat <<EOF
+  DIB_DOCKER_LOGIN_USERNAME => $DOCKER_LOGIN_USERNAME
+  DIB_DOCKER_LOGIN_PASSWORD => $DOCKER_LOGIN_PASSWORD
+  DIB_CONTAINER_REGISTRY => $DOCKER_APPS_CONTAINER_REGISTRY
+  DIB_DOCKER_COMPOSE_NETWORK_MODE => $DOCKER_COMPOSE_NETWORK_MODE
+  DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS => $DOCKER_COMPOSE_DEPLOY_REPLICAS
+  DIB_DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD => $DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD
+  DIB_DOCKER_COMPOSE_HEALTHCHECK_INTERVAL => $DOCKER_COMPOSE_HEALTHCHECK_INTERVAL
+  DIB_DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT => $DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT
+  DIB_DOCKER_COMPOSE_HEALTHCHECK_RETRIES => $DOCKER_COMPOSE_HEALTHCHECK_RETRIES
+EOF
+}
+
+function get_kompose_envvars() {
+  cat <<EOF
+  DIB_KOMPOSE_IMAGE_PULL_SECRET => $KOMPOSE_IMAGE_PULL_SECRET
+  DIB_KOMPOSE_IMAGE_PULL_POLICY => $KOMPOSE_IMAGE_PULL_POLICY
+  DIB_KOMPOSE_SERVICE_TYPE => $KOMPOSE_SERVICE_TYPE
+  DIB_KOMPOSE_SERVICE_EXPOSE => $KOMPOSE_SERVICE_EXPOSE
+  DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET => $KOMPOSE_SERVICE_EXPOSE_TLS_SECRET
+  DIB_KOMPOSE_SERVICE_NODEPORT_PORT => $KOMPOSE_SERVICE_NODEPORT_PORT
+EOF
+}
+
+function get_kubernetes_envvars() {
+  cat <<EOF
+  KUBE_HOME => $KUBE_HOME
+  DIB_KUBECONFIGS => $KUBECONFIGS
+  DIB_KUBERNETES_SERVICE_LABEL => $KUBERNETES_SERVICE_LABEL
+EOF
+}
 
 ## -- finish
