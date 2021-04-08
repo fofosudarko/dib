@@ -165,13 +165,15 @@ EOF
   return 0
 }
 
-function deploy_to_kubernetes() {
+function deploy_to_kubernetes_cluster() {
   check_kompose_validity
   set_kubernetes_configs
   generate_kubernetes_manifests
   
   while IFS=$'\n' read -r kubernetes_context
   do
+    msg "Deploying to $kubernetes_context ..."
+    
     run_as "$SUPER_USER" "
   function create_kubernetes_namespace_if_not_exists() {
     if ! $KUBECTL_CMD get namespaces --all-namespaces -o wide --no-headers| grep -q $APP_KUBERNETES_NAMESPACE
@@ -233,10 +235,12 @@ function deploy_to_kubernetes() {
     echo $COMMAND: Applying kubernetes manifests ...
     $KUBECTL_CMD apply -f $DOCKER_APP_COMPOSE_K8S_DIR -n $APP_KUBERNETES_NAMESPACE
   fi
-"
+
+  echo $COMMAND: Kubernetes manifests deployed successfully
+" || return 1
   done < <(get_kubernetes_contexts)
 
-  msg 'Kubernetes manifests deployed successfully'
+  return 0
 }
 
 function get_kubernetes_deployment_patch_spec() {

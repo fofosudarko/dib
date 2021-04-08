@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# File: editor.sh -> common docker operations
+# File: editor.sh -> common editor operations
 #
 # (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
 #
@@ -35,7 +35,7 @@ function parse_edit_command() {
         app-env)
           if edit_file "$DOCKER_APP_ENV_CHANGED_FILE" "$DOCKER_APP_ENV_CHANGED_FILE_COPY"
           then
-            msg "$DOCKER_APP_ENV_CHANGED_FILE edited successfully."
+            msg "$DOCKER_APP_ENV_CHANGED_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -44,7 +44,7 @@ function parse_edit_command() {
         common-env)
           if edit_file "$DOCKER_APP_COMMON_ENV_CHANGED_FILE" "$DOCKER_APP_COMMON_ENV_CHANGED_FILE_COPY"
           then
-            msg "$DOCKER_APP_COMMON_ENV_CHANGED_FILE edited successfully."
+            msg "$DOCKER_APP_COMMON_ENV_CHANGED_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -53,7 +53,7 @@ function parse_edit_command() {
         service-env)
           if edit_file "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE" "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE_COPY"
           then
-            msg "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE edited successfully."
+            msg "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE edited successfully"
             edit_status=0 
           else
             edit_status=1
@@ -62,7 +62,7 @@ function parse_edit_command() {
         project-env)
           if edit_file "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE" "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE_COPY"
           then
-            msg "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE edited successfully."
+            msg "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -76,7 +76,7 @@ function parse_edit_command() {
         dockerfile)
           if edit_file "$DOCKER_APP_CONFIG_DOCKER_FILE" "$DOCKER_APP_CONFIG_DOCKER_FILE_COPY"
           then
-            msg "$DOCKER_APP_CONFIG_DOCKER_FILE edited successfully."
+            msg "$DOCKER_APP_CONFIG_DOCKER_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -85,7 +85,7 @@ function parse_edit_command() {
         dockercomposefile)
           if edit_file "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE" "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY"
           then
-            msg "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE edited successfully."
+            msg "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -94,7 +94,7 @@ function parse_edit_command() {
         runscript)
           if edit_file "$DOCKER_APP_CONFIG_RUN_SCRIPT" "$DOCKER_APP_CONFIG_RUN_SCRIPT_COPY"
           then
-            msg "$DOCKER_APP_CONFIG_RUN_SCRIPT edited successfully."
+            msg "$DOCKER_APP_CONFIG_RUN_SCRIPT edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -108,7 +108,7 @@ function parse_edit_command() {
         dockercomposefile)
           if edit_file "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE" "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY"
           then
-            msg "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE edited successfully."
+            msg "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE edited successfully"
             edit_status=0
           else
             edit_status=1
@@ -124,7 +124,7 @@ function parse_edit_command() {
 
         if edit_file "$k8s_annotations_file" "$k8s_annotations_file_copy"
         then
-          msg "$k8s_annotations_file edited successfully."
+          msg "$k8s_annotations_file edited successfully"
           edit_status=0 
         else
           edit_status=1
@@ -137,7 +137,7 @@ function parse_edit_command() {
         application-properties)
           if edit_file "$SPRINGBOOT_APPLICATION_PROPERTIES" "$SPRINGBOOT_APPLICATION_PROPERTIES_COPY"
           then
-            msg "$SPRINGBOOT_APPLICATION_PROPERTIES edited successfully."
+            msg "$SPRINGBOOT_APPLICATION_PROPERTIES edited successfully"
             edit_status=0
           else
             edit_status=1
