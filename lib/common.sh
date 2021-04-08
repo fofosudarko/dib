@@ -292,7 +292,7 @@ function check_app_dependencies() {
     msg 'docker already installed successfully'
   else
     msg '
-    Oops, docker command not found! 
+    Oops, docker command not found.
     Please install and continue since this command helps you to build and push your Docker images
     '
   fi
@@ -302,7 +302,7 @@ function check_app_dependencies() {
     msg 'docker-compose installed successfully'
   else
     msg '
-    Oops, docker-compose command not found! 
+    Oops, docker-compose command not found.
     Please install and continue since this command helps you to build and run your Docker images collectively
   '
   fi
@@ -312,7 +312,7 @@ function check_app_dependencies() {
     msg 'kompose already installed successfully'
   else
     msg '
-    Oops, kompose command not found! 
+    Oops, kompose command not found.
     Please install and continue since this command helps you to convert your docker-compose files to Kubernetes manifests.
     '
   fi
@@ -322,7 +322,7 @@ function check_app_dependencies() {
     msg 'kubectl already installed successfully'
   else
     msg '
-    Oops, kubectl command not found! 
+    Oops, kubectl command not found.
     Please install and continue since this command helps you to interact with the apiserver 
     inside your Kubernetes master node for various kubernetes operations 
     such as doing deployments, querying the state of your clusters and more.
@@ -334,17 +334,8 @@ function check_app_dependencies() {
     msg 'nano already installed successfully'
   else
     msg '
-    Oops, nano command not found! 
+    Oops, nano command not found.
     Please install and continue since this command helps you to edit some files as your default editor.'
-  fi
-
-  if [[ -x "$SHELL_CMD" ]] 
-  then
-    msg 'bash already installed successfully'
-  else
-    msg '
-    Oops, bash command not found! 
-    Please install and continue since this command helps you to run system commands.'
   fi
 }
 

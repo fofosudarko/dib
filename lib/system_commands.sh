@@ -18,5 +18,6 @@
 : ${KUBECTL_CMD="$(which kubectl)"}
 : ${NANO_CMD="$(which nano)"}
 : ${SHELL_CMD="$(which bash)"}
+: ${LESS_CMD="$(which less)"}
 
 ## -- finish

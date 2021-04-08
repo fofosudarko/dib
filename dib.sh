@@ -34,7 +34,7 @@ function load_more_functions() {
   source "$LIB_DIR/springboot.sh"
   source "$LIB_DIR/docker.sh"
   source "$LIB_DIR/kubernetes.sh"
-  source "$LIB_DIR/editor.sh"
+  source "$LIB_DIR/file.sh"
 }
 
 function load_rc_file() {
@@ -96,7 +96,7 @@ if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
   [[ "$#" -ge 1 ]] && DIB_APP_IMAGE_TAG="$1"
-elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
+elif [[ "$DIB_RUN_COMMAND" == "edit" || "$DIB_RUN_COMMAND" == "show" || "$DIB_RUN_COMMAND" == "path" ]]
 then
   if [[ "$#" -ge 2 ]]
   then
@@ -165,6 +165,12 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
   parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "show" ]]
+then
+  parse_show_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "path" ]]
+then
+  parse_path_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
   parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
