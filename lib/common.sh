@@ -93,7 +93,8 @@ function format_docker_compose_template() {
       -e 's/@@DIB_APP_REPO@@/${APP_REPO}/g' \
       -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' \
       -e 's/@@DIB_DOCKER_COMPOSE_NETWORK_MODE@@/${DOCKER_COMPOSE_NETWORK_MODE}/g' \
-      -e 's/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g' '$docker_compose_template' 1> '$docker_compose_out'
+      -e 's/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g' \
+      -e 's/@@DIB_APP_PORT@@/${APP_PORT}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
   else
     run_as "$DOCKER_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
@@ -288,7 +289,7 @@ function app_env_file_changed() {
 function check_app_dependencies() {
   if [[ -x "$DOCKER_CMD" ]] 
   then
-    msg 'docker already installed successfully.'
+    msg 'docker already installed successfully'
   else
     msg '
     Oops, docker command not found! 
@@ -298,7 +299,7 @@ function check_app_dependencies() {
 
   if [[ -x "$DOCKER_COMPOSE_CMD" ]] 
   then
-    msg 'docker-compose installed successfully.'
+    msg 'docker-compose installed successfully'
   else
     msg '
     Oops, docker-compose command not found! 
@@ -308,7 +309,7 @@ function check_app_dependencies() {
 
   if [[ -x "$KOMPOSE_CMD" ]]
   then
-    msg 'kompose already installed successfully.'
+    msg 'kompose already installed successfully'
   else
     msg '
     Oops, kompose command not found! 
@@ -318,7 +319,7 @@ function check_app_dependencies() {
 
   if [[ -x "$KUBECTL_CMD" ]] 
   then
-    msg 'kubectl already installed successfully.'
+    msg 'kubectl already installed successfully'
   else
     msg '
     Oops, kubectl command not found! 
@@ -330,7 +331,7 @@ function check_app_dependencies() {
 
   if [[ -x "$NANO_CMD" ]] 
   then
-    msg 'nano already installed successfully.'
+    msg 'nano already installed successfully'
   else
     msg '
     Oops, nano command not found! 
@@ -339,7 +340,7 @@ function check_app_dependencies() {
 
   if [[ -x "$SHELL_CMD" ]] 
   then
-    msg 'bash already installed successfully.'
+    msg 'bash already installed successfully'
   else
     msg '
     Oops, bash command not found! 

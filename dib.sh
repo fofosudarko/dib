@@ -43,6 +43,13 @@ function load_rc_file() {
   [[ -f "$DIB_RC_FILE" ]] && import_envvars_from_rc_file "$DIB_RC_FILE"
 }
 
+function deploy_to_k8s_cluster() {
+  if ! deploy_to_kubernetes_cluster 
+  then
+    msg 'Kubernetes manifests deployed unsuccessfully'
+  fi
+}
+
 load_system_commands
 load_common_functions
 
@@ -86,7 +93,7 @@ if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]] || \
    [[ "$DIB_RUN_COMMAND" == "push" ]] || \
    [[ "$DIB_RUN_COMMAND" == "deploy" ]] || \
-   [[ "$DIB_RUN_COMMAND" == "k8s-generate" ]]
+   [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
   [[ "$#" -ge 1 ]] && DIB_APP_IMAGE_TAG="$1"
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
@@ -142,14 +149,14 @@ elif [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]]
 then
   build_docker_image || abort_build_process
   push_docker_image
-  deploy_to_kubernetes
+  deploy_to_k8s_cluster
 elif [[ "$DIB_RUN_COMMAND" == "push" ]]
 then
   push_docker_image
 elif [[ "$DIB_RUN_COMMAND" == "deploy" ]]
 then
-  deploy_to_kubernetes
-elif [[ "$DIB_RUN_COMMAND" == "k8s-generate" ]]
+  deploy_to_k8s_cluster
+elif [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
   if generate_kubernetes_manifests
   then
