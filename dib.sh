@@ -4,10 +4,7 @@
 #
 # (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
 #
-# Usage: bash dib.sh DIB_RUN_COMMAND CI_JOB APP_PROJECT APP_ENVIRONMENT APP_FRAMEWORK APP_IMAGE 
-#   ENV_VARS: APP_IMAGE_TAG APP_KUBERNETES_NAMESPACE APP_DB_CONNECTION_POOL
-#             APP_KUBERNETES_CONTEXT APP_BUILD_MODE APP_NPM_RUN_COMMANDS KUBECONFIGS
-#             KUBERNETES_SERVICE_LABEL USE_GIT_COMMIT USE_BUILD_DATE
+# Usage: bash dib.sh DIB_RUN_COMMAND <MORE_COMMANDS>
 #
 #
 
@@ -40,7 +37,7 @@ function load_more_functions() {
 function load_rc_file() {
   source "$LIB_DIR/rc_path.sh"
 
-  [[ -f "$DIB_RC_FILE" ]] && import_envvars_from_rc_file "$DIB_RC_FILE"
+  [[ ! -f "$DIB_RC_FILE" ]] && : || import_envvars_from_rc_file "$DIB_RC_FILE"
 }
 
 function deploy_to_k8s_cluster() {
@@ -55,31 +52,21 @@ load_common_functions
 
 COMMAND="$0"
 
-if [[ "$#" -eq 0 ]]
+if [[ "$#" -lt 1 ]]
 then
   show_help
   exit 0
 fi
 
-if [[ "$#" -lt 1 ]]
-then
-  msg 'expects at least 1 arguments i.e. DIB_RUN_COMMAND'
-  exit 1
-fi
-
 DIB_RUN_COMMAND="${1:-build}"
 shift
 
-if [[ "$#" -ge 1 ]]
-then
-  DIB_APP_IMAGE="$1"
-  shift
-fi
-
 DIB_HOME=${DIB_HOME/\~/$HOME}
+DIB_APP_BUILD_SRC=${DIB_APP_BUILD_SRC:-''}
 DIB_APP_IMAGE_TAG=
 DIB_FILE_TYPE=
 DIB_FILE_RESOURCE=
+DIB_ENV_TYPE=
 KUBECONFIG=
 DOCKER_COMPOSE_FILE_CHANGED=0
 K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=0
@@ -95,21 +82,30 @@ if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "deploy" ]] || \
    [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
-  [[ "$#" -ge 1 ]] && DIB_APP_IMAGE_TAG="$1"
-elif [[ "$DIB_RUN_COMMAND" == "edit" || "$DIB_RUN_COMMAND" == "show" || "$DIB_RUN_COMMAND" == "path" ]]
-then
-  if [[ "$#" -ge 2 ]]
+  if [[ "$#" -ge 2 ]] 
   then
-    DIB_FILE_TYPE="$1"
-    DIB_FILE_RESOURCE="$2"
+    DIB_APP_IMAGE="$1"
+    DIB_APP_IMAGE_TAG="$2"
   fi
-elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
+elif [[ "$DIB_RUN_COMMAND" == "edit" || "$DIB_RUN_COMMAND" == "show" || "$DIB_RUN_COMMAND" == "path" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
-    DIB_FILE_TYPE="$1"
-    DIB_FILE_RESOURCE="$2"
-    DIB_APP_IMAGE_TAG="$3"
+    DIB_APP_IMAGE="$1"
+    DIB_FILE_TYPE="$2"
+    DIB_FILE_RESOURCE="$3"
+  fi
+elif [[ "$DIB_RUN_COMMAND" == "env" ]]
+then
+  [[ "$#" -ge 1 ]] && DIB_ENV_TYPE="$1"
+elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
+then
+  if [[ "$#" -ge 4 ]]
+  then
+    DIB_APP_IMAGE="$1"
+    DIB_FILE_TYPE="$2"
+    DIB_FILE_RESOURCE="$3"
+    DIB_APP_IMAGE_TAG="$4"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "help" ]]
 then
@@ -171,6 +167,9 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "path" ]]
 then
   parse_path_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "env" ]]
+then
+  [[ -z "$DIB_ENV_TYPE" ]] && get_all_envvars || parse_env_command "$DIB_ENV_TYPE"
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
   parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
