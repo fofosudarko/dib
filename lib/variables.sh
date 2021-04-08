@@ -17,6 +17,8 @@
 : ${USE_BUILD_DATE=${DIB_USE_BUILD_DATE:-'false'}}
 : ${USE_SUDO=${DIB_USE_SUDO:-'false'}}
 : ${EDITOR_CMD=${EDITOR:-"$NANO_CMD"}}
+: ${PAGER_CMD=${PAGER:-"$LESS_CMD"}}
+
 
 # filters
 
