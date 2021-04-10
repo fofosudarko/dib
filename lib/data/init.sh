@@ -31,7 +31,7 @@
 
 # users
 
-: ${DIB_USER=${DIB_DOCKER_USER:-'docker'}}
+: ${DIB_USER=${DIB_USER:-'docker'}}
 : ${CI_USER=${DIB_CI_USER:-'jenkins'}}
 : ${SUPER_USER=${DIB_SUPER_USER:-'root'}}
 
