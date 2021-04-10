@@ -19,25 +19,49 @@ function load_common_functions() {
   source "$LIB_DIR/common.sh"
 }
 
-function load_system_commands() {  
-  source "$LIB_DIR/system_commands.sh"
+function load_commands() {  
+  source "$LIB_DIR/data/commands.sh"
 }
 
-function load_variables() {  
-  source "$LIB_DIR/variables.sh"
+function load_paths() {  
+  source "$LIB_DIR/data/paths.sh"
+}
+
+function load_init() {  
+  source "$LIB_DIR/data/init.sh"
+}
+
+function load_core() {  
+  source "$LIB_DIR/data/core.sh"
+}
+
+function load_template() {  
+  source "$LIB_DIR/data/template.sh"
 }
 
 function load_more_functions() {
+  source "$LIB_DIR/file.sh"
   source "$LIB_DIR/springboot.sh"
   source "$LIB_DIR/docker.sh"
   source "$LIB_DIR/kubernetes.sh"
-  source "$LIB_DIR/file.sh"
 }
 
-function load_rc_file() {
-  source "$LIB_DIR/rc_path.sh"
+function load_cache_file() {
+  if [[ -f "$DIB_APP_CACHE_FILE" ]]
+  then
+    import_envvars_from_cache_file "$DIB_APP_CACHE_FILE"
+  else
+    :
+  fi
+}
 
-  [[ ! -f "$DIB_RC_FILE" ]] && : || import_envvars_from_rc_file "$DIB_RC_FILE"
+function load_root_cache_file() {
+  if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
+  then
+    import_envvars_from_cache_file "$DIB_APP_ROOT_CACHE_FILE"
+  else
+    :
+  fi
 }
 
 function deploy_to_k8s_cluster() {
@@ -47,10 +71,8 @@ function deploy_to_k8s_cluster() {
   fi
 }
 
-load_system_commands
+load_commands
 load_common_functions
-
-COMMAND="$0"
 
 if [[ "$#" -lt 1 ]]
 then
@@ -62,7 +84,12 @@ DIB_RUN_COMMAND="${1:-build}"
 shift
 
 DIB_HOME=${DIB_HOME/\~/$HOME}
-DIB_APP_BUILD_SRC=${DIB_APP_BUILD_SRC:-''}
+DIB_APP_BUILD_SRC=
+DIB_APP_BUILD_DEST=
+DIB_APP_PROJECT=
+DIB_APP_FRAMEWORK=
+DIB_APP_ENVIRONMENT=
+DIB_APP_IMAGE=
 DIB_APP_IMAGE_TAG=
 DIB_FILE_TYPE=
 DIB_FILE_RESOURCE=
@@ -74,6 +101,9 @@ APP_ENV_FILE_CHANGED=0
 APP_COMMON_ENV_FILE_CHANGED=0
 APP_PROJECT_ENV_FILE_CHANGED=0
 APP_SERVICE_ENV_FILE_CHANGED=0
+
+load_init
+load_root_cache_file
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "build-push" ]] || \
@@ -87,13 +117,19 @@ then
     DIB_APP_IMAGE="$1"
     DIB_APP_IMAGE_TAG="$2"
   fi
-elif [[ "$DIB_RUN_COMMAND" == "edit" || "$DIB_RUN_COMMAND" == "show" || "$DIB_RUN_COMMAND" == "path" ]]
+elif [[ "$DIB_RUN_COMMAND" == "edit" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "show" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "path" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
     DIB_APP_IMAGE="$1"
     DIB_FILE_TYPE="$2"
     DIB_FILE_RESOURCE="$3"
+  elif [[ "$#" -ge 2 ]]
+  then
+    DIB_APP_IMAGE="$1"
+    DIB_FILE_TYPE="$2"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
 then
@@ -107,32 +143,58 @@ then
     DIB_FILE_RESOURCE="$3"
     DIB_APP_IMAGE_TAG="$4"
   fi
+elif [[ "$DIB_RUN_COMMAND" == "init" ]]
+then
+  parse_init_command
+elif [[ "$DIB_RUN_COMMAND" == "go" ]]
+then
+  if [[ "$#" -ge 3 ]]
+  then
+    DIB_APP_FRAMEWORK="$1"
+    DIB_APP_PROJECT="$2"
+    DIB_APP_IMAGE="$3"
+  elif [[ "$#" -ge 2 ]]
+  then
+    DIB_APP_FRAMEWORK="$1"
+    DIB_APP_IMAGE="$2"
+    DIB_APP_PROJECT="$DIB_APP_IMAGE"
+  fi
+
+  parse_go_command
+elif [[ "$DIB_RUN_COMMAND" == "checkout" ]]
+then
+  if [[ "$#" -ge 2 ]]
+  then
+    DIB_APP_IMAGE="$1"
+    DIB_APP_ENVIRONMENT="$2"
+  fi
+
+  parse_checkout_command
+elif [[ "$DIB_RUN_COMMAND" == "copy" ]]
+then
+  if [[ "$#" -ge 2 ]]
+  then
+    DIB_APP_IMAGE="$1"
+    DIB_APP_BUILD_SRC="$2"
+  fi
+
+  parse_copy_command
+elif [[ "$DIB_RUN_COMMAND" == "status" ]]
+then
+  parse_status_command
 elif [[ "$DIB_RUN_COMMAND" == "help" ]]
 then
   show_help
-  exit 0
 elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
 then
   check_app_dependencies
-  exit 0
 fi
 
-load_rc_file
-load_variables
+load_core
+load_paths
+load_cache_file
+load_template
 load_more_functions
-
-check_app_framework_validity
-check_app_environment_validity
-create_default_directories_if_not_exist
-
-case "$DIB_RUN_COMMAND"
-in
-  build|build-push|build-push-deploy)
-    copy_docker_project "$DOCKER_APP_BUILD_SRC" "$DOCKER_APP_BUILD_DEST"
-    copy_docker_build_files "$DOCKER_APP_BUILD_FILES" "$DOCKER_APP_BUILD_DEST"
-    copy_config_files "$DOCKER_APP_CONFIG_DIR" "$DOCKER_APP_BUILD_DEST"
-  ;;
-esac
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]]
 then
@@ -156,7 +218,7 @@ elif [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
   if generate_kubernetes_manifests
   then
-    msg "The kubernetes manifests can be found here: $DOCKER_APP_COMPOSE_K8S_DIR"
+    msg "The kubernetes manifests can be found here: $DIB_APP_COMPOSE_K8S_DIR"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
@@ -169,7 +231,12 @@ then
   parse_path_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
 then
-  [[ -z "$DIB_ENV_TYPE" ]] && get_all_envvars || parse_env_command "$DIB_ENV_TYPE"
+  if [[ -z "$DIB_ENV_TYPE" ]]
+  then
+    get_all_envvars
+  else
+    parse_env_command "$DIB_ENV_TYPE"
+  fi
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
   parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"

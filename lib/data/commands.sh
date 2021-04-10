@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# File: system_commands.sh -> system commands
+# File: commands.sh -> system commands
 #
 # (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
 #
-# Usage: source system_commands.sh
+# Usage: source commands.sh
 #
 #
 
