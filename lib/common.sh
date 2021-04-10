@@ -11,7 +11,7 @@
 ## - start here
 
 function msg() {
-  echo >&2 "$COMMAND: $1"
+  echo >&2 "$1"
 }
 
 function run_as() {
@@ -24,13 +24,25 @@ function run_as() {
 }
 
 function extract_exclude_patterns() {
-  grep -vE '^(\#|\!)' "$1" | grep -v '^$' | sed -e 's/^/--exclude="/' -e 's/$/"/g'| tr '\n' ' '
+  local path="$1" input_type="${2:-file}"
+
+  case "$input_type"
+  in
+    file)
+      grep -vE '^(\#|\!)' "$path" | grep -v '^$' | sed -e 's/^/--exclude="/' -e 's/$/"/g'| tr '\n' ' '
+    ;;
+    string)
+      echo -ne "$path" | grep -vE '^(\#|\!)' | grep -v '^$' | sed -e 's/^/--exclude="/' -e 's/$/"/g'| tr '\n' ' '
+    ;;
+  esac
 }
 
 function copy_docker_project() {
   local ci_project="$1" docker_project="$2" gitignore_patterns= hgignore_patterns=
 
   msg 'Copying docker project ...'
+
+  ensure_paths_exist "$docker_project"
 
   if [[ -f "$ci_project/.gitignore" ]]
   then
@@ -42,7 +54,7 @@ function copy_docker_project() {
     hgignore_patterns="$(extract_exclude_patterns "$ci_project/.hgignore")"
   fi
   
-  run_as "$DOCKER_USER" "
+  run_as "$DIB_USER" "
   rm -rf $docker_project/*
   rsync -av --exclude='.git/' $gitignore_patterns $hgignore_patterns $ci_project/ $docker_project
 "
@@ -50,22 +62,27 @@ function copy_docker_project() {
 
 function copy_docker_build_files() { 
   local build_files="$1" docker_project="$2"
-  local docker_compose_template="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
-  local docker_compose_out="$DOCKER_APP_CONFIG_DIR/docker-compose.yml"
+  local docker_compose_template="$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+  local docker_compose_out="$DIB_APP_CONFIG_DIR/docker-compose.yml"
   
   msg 'Copying docker build files ...'
 
+  ensure_paths_exist "$build_files $docker_project"
+
   format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
   
-  run_as "$DOCKER_USER" "rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project"
+  run_as "$DIB_USER" "rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project"
 }
 
 function copy_config_files() {
-  local config_dir="$1" app_build_dest="$2"
+  local config_dir="$1" app_build_dest="$2" 
+  local exclude_patterns="$(extract_exclude_patterns "$DIB_APP_CONFIG_EXCLUDE_PATTERNS" 'string')"
 
   msg 'Copying configuration files ...'
+
+  ensure_paths_exist "$config_dir $app_build_dest"
   
-  run_as "$DOCKER_USER" "rsync -av $config_dir/ $app_build_dest"
+  run_as "$DIB_USER" "rsync -av $exclude_patterns $config_dir/ $app_build_dest"
 }
 
 function format_docker_compose_template() {
@@ -73,10 +90,10 @@ function format_docker_compose_template() {
   
   if [[ -s "$docker_compose_template" ]]
   then
-    run_as "$DOCKER_USER" "
+    run_as "$DIB_USER" "
       sed -e 's/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g' \
       -e 's/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g' \
-      -e 's/@@DIB_CONTAINER_REGISTRY@@/${DOCKER_APPS_CONTAINER_REGISTRY}/g' \
+      -e 's/@@DIB_CONTAINER_REGISTRY@@/${DIB_APPS_CONTAINER_REGISTRY}/g' \
       -e 's/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
       -e 's/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
       -e 's/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
@@ -97,7 +114,7 @@ function format_docker_compose_template() {
       -e 's/@@DIB_APP_PORT@@/${APP_PORT}/g' '$docker_compose_template' 1> '$docker_compose_out'
     "
   else
-    run_as "$DOCKER_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
+    run_as "$DIB_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
   fi
 }
 
@@ -106,13 +123,13 @@ function update_env_file() {
   
   if [[ -s "$changed_env_file" ]]
   then
-    run_as "$DOCKER_USER" "
+    run_as "$DIB_USER" "
     cp $changed_env_file $original_env_file 2> /dev/null
     cp $changed_env_file $env_file 2> /dev/null
     [[ -h '$symlinked_env_file' ]] || ln -s $env_file $symlinked_env_file 2> /dev/null
   "
   else
-    run_as "$DOCKER_USER" "
+    run_as "$DIB_USER" "
     test -f $changed_env_file || \
       touch $changed_env_file && cp $changed_env_file $env_file && ln -s $env_file $symlinked_env_file
   "
@@ -140,19 +157,25 @@ function abort_build_process() {
   exit 1
 }
 
-function create_default_directories_if_not_exist() {
-  run_as "$DOCKER_USER" "
+function create_directory_if_not_exist() {
+  local directory="$1"
+
+  run_as "$DIB_USER" "[[ -d '$directory' ]] || mkdir -p '$directory'"
+}
+
+function create_default_directories_on_init() {
+  run_as "$DIB_USER" "
   defaultDirs=(
-    ${DOCKER_APP_BUILD_DEST}
-    ${DOCKER_APP_CONFIG_DIR}
-    ${DOCKER_APP_COMPOSE_DIR}
-    ${DOCKER_APP_COMPOSE_K8S_DIR}
-    ${DOCKER_APP_KEYSTORES_SRC}
-    ${DOCKER_APP_K8S_ANNOTATIONS_DIR}
-    ${DOCKER_APP_COMMON_ENV_DIR}
-    ${DOCKER_APP_PROJECT_ENV_DIR}
-    ${DOCKER_APP_SERVICE_ENV_DIR}
-    ${MAVEN_WRAPPER_PROPERTIES_SRC}
+    ${DIB_CACHE}
+    ${DIB_APPS_DIR}
+    ${DIB_APPS_CONFIG_DIR}
+    ${DIB_APPS_KEYSTORES_DIR}
+    ${DIB_APPS_COMPOSE_DIR}
+    ${DIB_APPS_ENV_DIR}
+    ${DIB_APPS_K8S_ANNOTATIONS_DIR}
+    ${DIB_APPS_KUBERNETES_DIR}
+    ${DIB_APPS_CACHE_DIR}
+    ${DIB_APP_CACHE_DIR}
   )
 
   for defaultDir in \${defaultDirs[@]}
@@ -160,6 +183,37 @@ function create_default_directories_if_not_exist() {
     [[ -d \"\$defaultDir\" ]] || mkdir -p \"\$defaultDir\"
   done
 "
+}
+
+function ensure_paths_exist() {
+  local paths="$1"
+
+  run_as "$DIB_USER" "
+  for path in $paths
+  do
+    [[ -e \"\$path\" ]] || { echo \"\$path must exist before.\"; exit 1; } 
+  done
+" || exit 1
+}
+
+function create_directories_if_not_exist() {
+  local directories="$1"
+
+  run_as "$DIB_USER" "
+  for directory in $directories
+  do
+    [[ -d \"\$directory\" ]] || mkdir -p \$directory 
+  done
+"
+}
+
+function ensure_dir_paths_exist() {
+  local dir_paths=
+
+  dir_paths="$DIB_APP_BUILD_DEST $DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR"
+  dir_paths="$dir_paths $DIB_APP_K8S_ANNOTATIONS_DIR $DIB_APP_CACHE_DIR $DIB_APP_KEYSTORES_SRC"
+
+  ensure_paths_exist "$dir_paths"
 }
 
 function is_kompose_version_valid() {
@@ -182,10 +236,10 @@ function set_app_frontend_build_mode() {
   case "$APP_BUILD_MODE"
   in
     spa)
-      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE"
+      run_as "$DIB_USER" "cp $DIB_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE"
     ;;
     universal)
-      run_as "$DOCKER_USER" "cp $DOCKER_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE"
+      run_as "$DIB_USER" "cp $DIB_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE"
     ;;
     *)
       msg "app build mode '$APP_BUILD_MODE' unknown"
@@ -211,10 +265,10 @@ function get_app_image_tag() {
 
   case "$APP_ENVIRONMENT"
   in
-    development) app_image_tag="dev-${app_image_tag}";;
+    dev|develop|development) app_image_tag="dev-${app_image_tag}";;
     staging) app_image_tag="staging-${app_image_tag}";;
     beta) app_image_tag="beta-${app_image_tag}";;
-    production) app_image_tag="prod-${app_image_tag}";;
+    prod|production) app_image_tag="prod-${app_image_tag}";;
     demo) app_image_tag="demo-${app_image_tag}";;
     alpha) app_image_tag="alpha-${app_image_tag}";;
     *) app_image_tag="${app_image_tag}";;
@@ -224,8 +278,8 @@ function get_app_image_tag() {
 }
 
 function kubernetes_resources_annotations_changed() {
-  local changed_kubernetes_resources_annotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed
-  local original_kubernetes_resources_annotations=$DOCKER_APP_K8S_ANNOTATIONS_DIR/*original
+  local changed_kubernetes_resources_annotations=$DIB_APP_K8S_ANNOTATIONS_DIR/*changed
+  local original_kubernetes_resources_annotations=$DIB_APP_K8S_ANNOTATIONS_DIR/*original
   local new_entries=$(diff \
     <(sort $changed_kubernetes_resources_annotations 2> /dev/null) \
     <(sort $original_kubernetes_resources_annotations 2> /dev/null) | wc -l)
@@ -240,6 +294,8 @@ function kubernetes_resources_annotations_changed() {
 
 function env_file_changed() {
   local env_file="$1" original_env_file="$2" changed_env_file="$3" symlinked_env_file="$4"
+
+  ensure_paths_exist "$changed_env_file"
   
   if detect_file_changed "$original_env_file" "$changed_env_file" || [[ ! -e "$symlinked_env_file" ]]
   then
@@ -251,37 +307,37 @@ function env_file_changed() {
 }
 
 function app_project_env_file_changed() {
-  local env_file=$DOCKER_APP_PROJECT_ENV_DIR/project.env
-  local original_env_file=$DOCKER_APP_PROJECT_ENV_DIR/project.env.original
-  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-project.env
-  local changed_env_file="$DOCKER_APP_PROJECT_ENV_CHANGED_FILE"
+  local env_file=$DIB_APP_PROJECT_ENV_DIR/project.env
+  local original_env_file=$DIB_APP_PROJECT_ENV_DIR/project.env.original
+  local symlinked_env_file=$DIB_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-project.env
+  local changed_env_file="$DIB_APP_PROJECT_ENV_CHANGED_FILE"
   
   return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
 function app_common_env_file_changed() {
-  local env_file=$DOCKER_APP_COMMON_ENV_DIR/common.env
-  local original_env_file=$DOCKER_APP_COMMON_ENV_DIR/common.env.original
-  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-${APP_ENVIRONMENT}-common.env
-  local changed_env_file="$DOCKER_APP_COMMON_ENV_CHANGED_FILE"
+  local env_file=$DIB_APP_COMMON_ENV_DIR/common.env
+  local original_env_file=$DIB_APP_COMMON_ENV_DIR/common.env.original
+  local symlinked_env_file=$DIB_APP_COMPOSE_DIR/${APP_PROJECT}-${APP_FRAMEWORK}-${APP_ENVIRONMENT}-common.env
+  local changed_env_file="$DIB_APP_COMMON_ENV_CHANGED_FILE"
   
   return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
 function app_service_env_file_changed() {
-  local env_file=$DOCKER_APP_SERVICE_ENV_DIR/service.env
-  local original_env_file=$DOCKER_APP_SERVICE_ENV_DIR/service.env.original
-  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-service.env
-  local changed_env_file="$DOCKER_APP_SERVICE_ENV_CHANGED_FILE"
+  local env_file=$DIB_APP_SERVICE_ENV_DIR/service.env
+  local original_env_file=$DIB_APP_SERVICE_ENV_DIR/service.env.original
+  local symlinked_env_file=$DIB_APP_COMPOSE_DIR/${APP_IMAGE}-service.env
+  local changed_env_file="$DIB_APP_SERVICE_ENV_CHANGED_FILE"
   
   return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
 
 function app_env_file_changed() {
-  local env_file=$DOCKER_APP_COMPOSE_DIR/app.env
-  local original_env_file=$DOCKER_APP_COMPOSE_DIR/app.env.original
-  local symlinked_env_file=$DOCKER_APP_COMPOSE_DIR/${APP_IMAGE}-app.env
-  local changed_env_file="$DOCKER_APP_ENV_CHANGED_FILE"
+  local env_file=$DIB_APP_COMPOSE_DIR/app.env
+  local original_env_file=$DIB_APP_COMPOSE_DIR/app.env.original
+  local symlinked_env_file=$DIB_APP_COMPOSE_DIR/${APP_IMAGE}-app.env
+  local changed_env_file="$DIB_APP_ENV_CHANGED_FILE"
   
   return $(env_file_changed "$env_file" "$original_env_file" "$changed_env_file" "$symlinked_env_file")
 }
@@ -337,6 +393,8 @@ function check_app_dependencies() {
     Oops, nano command not found.
     Please install and continue since this command helps you to edit some files as your default editor.'
   fi
+
+  exit 0
 }
 
 function check_kompose_validity() {
@@ -371,11 +429,32 @@ function check_app_framework_validity() {
   fi
 }
 
-function show_help() {
-  msg "This is a help message"
+function check_path_validity() {
+  local path="$1"
+
+  if [[ -z "$path" ]] || echo -ne "$path"| grep -qE "$DIB_APP_INVALID_PATH_TOKENS"
+  then
+    msg "Invalid path. No path token should match '$DIB_APP_INVALID_PATH_TOKENS'"
+    exit 1
+  fi
 }
 
-function import_envvars_from_rc_file() {
+function check_parameter_validity() {
+  local parameter="$1" parameter_placeholder="$2"
+
+  if [[ "$parameter" == "$parameter_placeholder" ]]
+  then
+    msg "Invalid parameter. Use a different value from placeholder value '$parameter_placeholder'"
+    exit 1
+  fi
+}
+
+function show_help() {
+  msg "This is a help message"
+  exit 0
+}
+
+function import_envvars_from_cache_file() {
   local rc_file="$1" tmp_location=$(mktemp)
 
   sed '/^export/!s/^/export /g' "$rc_file" 1> "$tmp_location"
@@ -417,89 +496,248 @@ function parse_env_command() {
 
 function get_all_envvars() {
   get_globals_envvars
-  echo
   get_users_envvars
-  echo
   get_app_envvars
-  echo
   get_docker_envvars
-  echo
   get_kompose_envvars
-  echo
   get_kubernetes_envvars
 }
 
 function get_globals_envvars() {
   cat <<EOF
-  DIB_HOME => $DIB_HOME
-  DIB_USE_GIT_COMMIT => $USE_GIT_COMMIT
-  DIB_USE_BUILD_DATE => $USE_BUILD_DATE
-  DIB_USE_SUDO => $USE_SUDO
-  DIB_CI_WORKSPACE => $CI_WORKSPACE
-  DIB_CI_JOB => $CI_JOB
+DIB_HOME=$DIB_HOME
+DIB_USE_GIT_COMMIT=$USE_GIT_COMMIT
+DIB_USE_BUILD_DATE=$USE_BUILD_DATE
+DIB_USE_SUDO=$USE_SUDO
+DIB_CI_WORKSPACE=$CI_WORKSPACE
+DIB_CI_JOB=$CI_JOB
 EOF
 }
 
 function get_users_envvars() {
   cat <<EOF
-  DIB_DOCKER_USER => $DOCKER_USER
-  DIB_CI_USER => $CI_USER
-  DIB_SUPER_USER => $SUPER_USER
+DIB_DOCKER_USER=$DIB_USER
+DIB_CI_USER=$CI_USER
+DIB_SUPER_USER=$SUPER_USER
 EOF
 }
 
 function get_app_envvars() {
   cat <<EOF
-  DIB_APP_PROJECT => $APP_PROJECT
-  DIB_APP_FRAMEWORK => $APP_FRAMEWORK
-  DIB_APP_ENVIRONMENT => $APP_ENVIRONMENT
-  DIB_APP_IMAGE_TAG => $APP_IMAGE_TAG
-  DIB_APP_KUBERNETES_NAMESPACE => $APP_KUBERNETES_NAMESPACE
-  DIB_APP_DB_CONNECTION_POOL => $APP_DB_CONNECTION_POOL
-  DIB_APP_KUBERNETES_CONTEXT => $APP_KUBERNETES_CONTEXT
-  DIB_APP_BUILD_MODE => $APP_BUILD_MODE
-  DIB_APP_NPM_RUN_COMMANDS => $APP_NPM_RUN_COMMANDS
-  DIB_APP_BASE_HREF => $APP_BASE_HREF
-  DIB_APP_DEPLOY_URL => $APP_DEPLOY_URL
-  DIB_APP_BUILD_CONFIGURATION => $APP_BUILD_CONFIGURATION
-  DIB_APP_NPM_BUILD_COMMAND_DELIMITER => $APP_NPM_BUILD_COMMAND_DELIMITER
-  DIB_APP_REPO => $APP_REPO
-  DIB_APP_PORT => $APP_PORT
-  DIB_APP_BUILD_SRC => $DOCKER_APP_BUILD_SRC
+DIB_APP_PROJECT=$APP_PROJECT
+DIB_APP_FRAMEWORK=$APP_FRAMEWORK
+DIB_APP_ENVIRONMENT=$APP_ENVIRONMENT
+DIB_APP_IMAGE_TAG=$APP_IMAGE_TAG
+DIB_APP_DB_CONNECTION_POOL=$APP_DB_CONNECTION_POOL
+DIB_APP_BUILD_MODE=$APP_BUILD_MODE
+DIB_APP_NPM_RUN_COMMANDS=$APP_NPM_RUN_COMMANDS
+DIB_APP_BASE_HREF=$APP_BASE_HREF
+DIB_APP_DEPLOY_URL=$APP_DEPLOY_URL
+DIB_APP_BUILD_CONFIGURATION=$APP_BUILD_CONFIGURATION
+DIB_APP_NPM_BUILD_COMMAND_DELIMITER=$APP_NPM_BUILD_COMMAND_DELIMITER
+DIB_APP_REPO=$APP_REPO
+DIB_APP_PORT=$APP_PORT
+DIB_APP_BUILD_SRC=$DIB_APP_BUILD_SRC
 EOF
 }
 
 function get_docker_envvars() {
   cat <<EOF
-  DIB_DOCKER_LOGIN_USERNAME => $DOCKER_LOGIN_USERNAME
-  DIB_DOCKER_LOGIN_PASSWORD => $DOCKER_LOGIN_PASSWORD
-  DIB_CONTAINER_REGISTRY => $DOCKER_APPS_CONTAINER_REGISTRY
-  DIB_DOCKER_COMPOSE_NETWORK_MODE => $DOCKER_COMPOSE_NETWORK_MODE
-  DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS => $DOCKER_COMPOSE_DEPLOY_REPLICAS
-  DIB_DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD => $DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD
-  DIB_DOCKER_COMPOSE_HEALTHCHECK_INTERVAL => $DOCKER_COMPOSE_HEALTHCHECK_INTERVAL
-  DIB_DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT => $DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT
-  DIB_DOCKER_COMPOSE_HEALTHCHECK_RETRIES => $DOCKER_COMPOSE_HEALTHCHECK_RETRIES
+DIB_DOCKER_LOGIN_USERNAME=$DOCKER_LOGIN_USERNAME
+DIB_DOCKER_LOGIN_PASSWORD=$DOCKER_LOGIN_PASSWORD
+DIB_CONTAINER_REGISTRY=$DIB_APPS_CONTAINER_REGISTRY
+DIB_DOCKER_COMPOSE_NETWORK_MODE=$DOCKER_COMPOSE_NETWORK_MODE
+DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS=$DOCKER_COMPOSE_DEPLOY_REPLICAS
+DIB_DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD=$DOCKER_COMPOSE_HEALTHCHECK_START_PERIOD
+DIB_DOCKER_COMPOSE_HEALTHCHECK_INTERVAL=$DOCKER_COMPOSE_HEALTHCHECK_INTERVAL
+DIB_DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT=$DOCKER_COMPOSE_HEALTHCHECK_TIMEOUT
+DIB_DOCKER_COMPOSE_HEALTHCHECK_RETRIES=$DOCKER_COMPOSE_HEALTHCHECK_RETRIES
 EOF
 }
 
 function get_kompose_envvars() {
   cat <<EOF
-  DIB_KOMPOSE_IMAGE_PULL_SECRET => $KOMPOSE_IMAGE_PULL_SECRET
-  DIB_KOMPOSE_IMAGE_PULL_POLICY => $KOMPOSE_IMAGE_PULL_POLICY
-  DIB_KOMPOSE_SERVICE_TYPE => $KOMPOSE_SERVICE_TYPE
-  DIB_KOMPOSE_SERVICE_EXPOSE => $KOMPOSE_SERVICE_EXPOSE
-  DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET => $KOMPOSE_SERVICE_EXPOSE_TLS_SECRET
-  DIB_KOMPOSE_SERVICE_NODEPORT_PORT => $KOMPOSE_SERVICE_NODEPORT_PORT
+DIB_KOMPOSE_IMAGE_PULL_SECRET=$KOMPOSE_IMAGE_PULL_SECRET
+DIB_KOMPOSE_IMAGE_PULL_POLICY=$KOMPOSE_IMAGE_PULL_POLICY
+DIB_KOMPOSE_SERVICE_TYPE=$KOMPOSE_SERVICE_TYPE
+DIB_KOMPOSE_SERVICE_EXPOSE=$KOMPOSE_SERVICE_EXPOSE
+DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET=$KOMPOSE_SERVICE_EXPOSE_TLS_SECRET
+DIB_KOMPOSE_SERVICE_NODEPORT_PORT=$KOMPOSE_SERVICE_NODEPORT_PORT
 EOF
 }
 
 function get_kubernetes_envvars() {
   cat <<EOF
-  KUBE_HOME => $KUBE_HOME
-  DIB_KUBECONFIGS => $KUBECONFIGS
-  DIB_KUBERNETES_SERVICE_LABEL => $KUBERNETES_SERVICE_LABEL
+KUBE_HOME=$KUBE_HOME
+DIB_KUBECONFIGS=$KUBECONFIGS
+DIB_KUBERNETES_SERVICE_LABEL=$KUBERNETES_SERVICE_LABEL
+DIB_APP_KUBERNETES_NAMESPACE=$APP_KUBERNETES_NAMESPACE
+DIB_APP_KUBERNETES_CONTEXT=$APP_KUBERNETES_CONTEXT
 EOF
+}
+
+function parse_init_command() {
+  
+  function create_directories_on_init() {
+    local directories=
+
+    directories="$DIB_CACHE $DIB_APPS_DIR $DIB_APPS_CONFIG_DIR $DIB_APPS_KEYSTORES_DIR"
+    directories="$directories $DIB_APPS_COMPOSE_DIR $DIB_APPS_ENV_DIR $DIB_APPS_K8S_ANNOTATIONS_DIR"
+    directories="$directories $DIB_APPS_KUBERNETES_DIR $DIB_APPS_CACHE_DIR"
+
+    create_directories_if_not_exist "$directories"
+  }
+
+  check_parameter_validity "$DIB_HOME" "$DIB_HOME_PLACEHOLDER"
+  create_directories_on_init
+  exit 0
+}
+
+function parse_go_command() {
+  
+  function save_data_to_root_cache_on_go() {
+  if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
+  then
+    cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
+  fi
+
+  cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+DIB_APP_FRAMEWORK=$DIB_APP_FRAMEWORK
+DIB_APP_PROJECT=$DIB_APP_PROJECT
+DIB_APP_IMAGE=$DIB_APP_IMAGE
+EOF
+  }
+
+  load_core
+  check_parameter_validity "$DIB_HOME" "$DIB_HOME_PLACEHOLDER"
+  check_parameter_validity "$APP_FRAMEWORK" "$DIB_APP_FRAMEWORK_PLACEHOLDER"
+  check_parameter_validity "$APP_PROJECT" "$DIB_APP_PROJECT_PLACEHOLDER"
+  check_parameter_validity "$APP_IMAGE" "$DIB_APP_IMAGE_PLACEHOLDER"
+  check_app_framework_validity
+  save_data_to_root_cache_on_go
+  exit 0
+}
+
+function parse_checkout_command() {
+  
+  function create_directories_on_checkout() {
+    local directories=
+
+    DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_COMPOSE_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_COMPOSE_K8S_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT/kubernetes"
+    DIB_APP_K8S_ANNOTATIONS_DIR="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_PROJECT_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"
+    DIB_APP_SERVICE_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"
+    DIB_APP_COMMON_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"
+    DIB_APP_CACHE_DIR="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_KEYSTORES_SRC="$DIB_APPS_KEYSTORES_DIR/$APP_PROJECT/$APP_ENVIRONMENT/keystores"
+    DIB_APP_BUILD_DEST="$DIB_APPS_DIR/$APP_FRAMEWORK/$APP_IMAGE/$APP_ENVIRONMENT/$CI_JOB"
+    DIB_APP_KEYSTORES_DEST="$DIB_APP_BUILD_DEST"
+
+    directories="$DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR $DIB_APP_COMPOSE_K8S_DIR"
+    directories="$directories $DIB_APP_K8S_ANNOTATIONS_DIR $DIB_APP_PROJECT_ENV_DIR"
+    directories="$directories $DIB_APP_SERVICE_ENV_DIR $DIB_APP_COMMON_ENV_DIR $DIB_APP_CACHE_DIR"
+    directories="$directories $DIB_APP_BUILD_DEST $DIB_APP_KEYSTORES_SRC"
+  
+    create_directories_if_not_exist "$directories"
+  }
+
+  function save_data_to_root_cache_on_checkout() {
+    if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
+    then
+      cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
+    fi
+
+    cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+DIB_APP_FRAMEWORK=$APP_FRAMEWORK
+DIB_APP_PROJECT=$APP_PROJECT
+DIB_APP_IMAGE=$APP_IMAGE
+DIB_APP_ENVIRONMENT=$APP_ENVIRONMENT
+DIB_APP_CONFIG_DIR=$DIB_APP_CONFIG_DIR
+DIB_APP_COMPOSE_DIR=$DIB_APP_COMPOSE_DIR
+DIB_APP_COMPOSE_K8S_DIR=$DIB_APP_COMPOSE_K8S_DIR
+DIB_APP_K8S_ANNOTATIONS_DIR=$DIB_APP_K8S_ANNOTATIONS_DIR
+DIB_APP_PROJECT_ENV_DIR=$DIB_APP_PROJECT_ENV_DIR
+DIB_APP_SERVICE_ENV_DIR=$DIB_APP_SERVICE_ENV_DIR
+DIB_APP_COMMON_ENV_DIR=$DIB_APP_COMMON_ENV_DIR
+DIB_APP_CACHE_DIR=$DIB_APP_CACHE_DIR
+DIB_APP_KEYSTORES_SRC=$DIB_APP_KEYSTORES_SRC
+DIB_CI_JOB=$CI_JOB
+DIB_APP_BUILD_DEST=$DIB_APP_BUILD_DEST
+DIB_APP_KEYSTORES_DEST=$DIB_APP_KEYSTORES_DEST
+EOF
+  }
+
+  load_core
+  check_parameter_validity "$APP_ENVIRONMENT" "$DIB_APP_ENVIRONMENT_PLACEHOLDER"
+  check_app_environment_validity
+  create_directories_on_checkout
+  save_data_to_root_cache_on_checkout
+  exit 0
+}
+
+function parse_status_command() {
+  [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] && cat "$DIB_APP_ROOT_CACHE_FILE"
+  exit 0
+}
+
+function parse_copy_command() {
+  
+  function create_directories_on_copy() {
+    local directories=
+
+    DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_COMPOSE_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_COMPOSE_K8S_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT/kubernetes"
+    DIB_APP_K8S_ANNOTATIONS_DIR="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_PROJECT_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"
+    DIB_APP_SERVICE_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"
+    DIB_APP_COMMON_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"
+    DIB_APP_CACHE_DIR="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+    DIB_APP_KEYSTORES_SRC="$DIB_APPS_KEYSTORES_DIR/$APP_PROJECT/$APP_ENVIRONMENT/keystores"
+    DIB_APP_BUILD_DEST="$DIB_APPS_DIR/$APP_FRAMEWORK/$APP_IMAGE/$APP_ENVIRONMENT/$CI_JOB"
+    DIB_APP_KEYSTORES_DEST="$DIB_APP_BUILD_DEST"
+
+    directories="$DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR $DIB_APP_COMPOSE_K8S_DIR $DIB_APP_K8S_ANNOTATIONS_DIR"
+    directories="$directories $DIB_APP_PROJECT_ENV_DIR $DIB_APP_SERVICE_ENV_DIR $DIB_APP_COMMON_ENV_DIR"
+    directories="$directories $DIB_APP_CACHE_DIR $DIB_APP_KEYSTORES_SRC $DIB_APP_BUILD_DEST"
+
+    create_directories_if_not_exist "$directories"
+  }
+
+  function save_data_to_root_cache_on_copy() {
+    if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
+    then
+      cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
+    fi
+
+    cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+DIB_APP_FRAMEWORK=$APP_FRAMEWORK
+DIB_APP_PROJECT=$APP_PROJECT
+DIB_APP_IMAGE=$APP_IMAGE
+DIB_APP_ENVIRONMENT=$APP_ENVIRONMENT
+DIB_APP_CONFIG_DIR=$DIB_APP_CONFIG_DIR
+DIB_APP_COMPOSE_DIR=$DIB_APP_COMPOSE_DIR
+DIB_APP_COMPOSE_K8S_DIR=$DIB_APP_COMPOSE_K8S_DIR
+DIB_APP_K8S_ANNOTATIONS_DIR=$DIB_APP_K8S_ANNOTATIONS_DIR
+DIB_APP_PROJECT_ENV_DIR=$DIB_APP_PROJECT_ENV_DIR
+DIB_APP_SERVICE_ENV_DIR=$DIB_APP_SERVICE_ENV_DIR
+DIB_APP_COMMON_ENV_DIR=$DIB_APP_COMMON_ENV_DIR
+DIB_APP_CACHE_DIR=$DIB_APP_CACHE_DIR
+DIB_APP_KEYSTORES_SRC=$DIB_APP_KEYSTORES_SRC
+DIB_APP_BUILD_SRC=$DIB_APP_BUILD_SRC
+DIB_APP_BUILD_DEST=$DIB_APP_BUILD_DEST
+DIB_CI_JOB=$CI_JOB
+DIB_APP_KEYSTORES_DEST=$DIB_APP_KEYSTORES_DEST
+EOF
+  }
+
+  load_core
+  create_directories_on_copy
+  copy_docker_project "$DIB_APP_BUILD_SRC" "$DIB_APP_BUILD_DEST"
+  save_data_to_root_cache_on_copy
+  exit 0
 }
 
 ## -- finish

@@ -24,7 +24,7 @@ function set_kubernetes_configs() {
 function get_kubernetes_contexts() {
   local kubernetes_context_filter="${APP_KUBERNETES_CONTEXT}"
   
-  run_as "$DOCKER_USER" "
+  run_as "$DIB_USER" "
   KUBECONFIG=${KUBECONFIG} $KUBECTL_CMD config get-contexts --no-headers| \
   grep -E '$kubernetes_context_filter'| \
   tr -s '[:space:]'| awk '{ print \$2; }'
@@ -34,14 +34,17 @@ function get_kubernetes_contexts() {
 function generate_kubernetes_manifests() {
   
   function docker_compose_file_changed() {
+    ensure_paths_exist "$changed_compose_file"
     return $(detect_file_changed "$original_compose_file" "$changed_compose_file")
   }
   
   msg 'Generating Kubernetes manifests ...'
 
-  local original_compose_file=$DOCKER_APP_COMPOSE_DIR/docker-compose.original.yml
-  local changed_compose_file=$DOCKER_APP_COMPOSE_DIR/docker-compose.changed.yml
-  local template_compose_file="$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+  local original_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.original.yml
+  local changed_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.changed.yml
+  local template_compose_file="$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+
+  ensure_paths_exist "$template_compose_file"
 
   format_docker_compose_template "$template_compose_file" "$changed_compose_file"
 
@@ -62,13 +65,13 @@ function generate_kubernetes_manifests() {
     return 1
   fi
   
-  run_as "$DOCKER_USER" "
+  run_as "$DIB_USER" "
   function get_kubernetes_resources_annotations() {
-    dir -1 $DOCKER_APP_K8S_ANNOTATIONS_DIR/*changed 2> /dev/null
+    dir -1 $DIB_APP_K8S_ANNOTATIONS_DIR/*changed 2> /dev/null
   }
 
   function get_kubernetes_resources() {
-    dir -1 $DOCKER_APP_COMPOSE_K8S_DIR/* 2> /dev/null
+    dir -1 $DIB_APP_COMPOSE_K8S_DIR/* 2> /dev/null
   }
 
   function get_kubernetes_resource_from_annotation_file() {
@@ -128,8 +131,8 @@ EOF
       do
         resource_annotation=\$(get_kubernetes_resource_from_annotation_file \"\$kubernetes_resource_annotation\")
         kubernetes_resource=\$(select_kubernetes_resource \"\$kubernetes_resources\" \"\$resource_annotation\")
-        changed_resource_annotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.changed
-        original_resource_annotation=$DOCKER_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.original
+        changed_resource_annotation=$DIB_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.changed
+        original_resource_annotation=$DIB_APP_K8S_ANNOTATIONS_DIR/\${resource_annotation}.k8s-annotations.original
         
         if [[ -n \"\$kubernetes_resource\" ]]
         then
@@ -141,9 +144,9 @@ EOF
   }
 
   function generate_kubernetes_manifests() {
-    [[ -d \"$DOCKER_APP_COMPOSE_K8S_DIR\" ]] || mkdir -p \"$DOCKER_APP_COMPOSE_K8S_DIR\"
+    [[ -d \"$DIB_APP_COMPOSE_K8S_DIR\" ]] || mkdir -p \"$DIB_APP_COMPOSE_K8S_DIR\"
     
-    cd $DOCKER_APP_COMPOSE_K8S_DIR
+    cd $DIB_APP_COMPOSE_K8S_DIR
     
     $KOMPOSE_CMD convert -f $changed_compose_file
     
@@ -206,7 +209,7 @@ function deploy_to_kubernetes_cluster() {
 
   export KUBECONFIG=${KUBECONFIG}
 
-  echo $COMMAND: Switching kubernetes context to $kubernetes_context ...
+  echo Switching kubernetes context to $kubernetes_context ...
 
   $KUBECTL_CMD config use-context $kubernetes_context
 
@@ -216,7 +219,7 @@ function deploy_to_kubernetes_cluster() {
 
   if [[ \$APP_DB_CONNECTION_POOL == 'session' ]]
   then
-    echo $COMMAND: Scale kubernetes deployments to zero ...
+    echo Scale kubernetes deployments to zero ...
     $KUBECTL_CMD scale deployment/$APP_IMAGE --replicas=0 -n $APP_KUBERNETES_NAMESPACE 
   fi
 
@@ -229,14 +232,14 @@ function deploy_to_kubernetes_cluster() {
     [[ \"$APP_SERVICE_ENV_FILE_CHANGED\" == \"0\" ]] && \
     [[ \"$APP_PROJECT_ENV_FILE_CHANGED\" == \"0\" ]]
   then
-    echo $COMMAND: Patching kubernetes deployments ...
+    echo Patching kubernetes deployments ...
     eval \"$(patch_kubernetes_deployment)\"
   else
-    echo $COMMAND: Applying kubernetes manifests ...
-    $KUBECTL_CMD apply -f $DOCKER_APP_COMPOSE_K8S_DIR -n $APP_KUBERNETES_NAMESPACE
+    echo Applying kubernetes manifests ...
+    $KUBECTL_CMD apply -f $DIB_APP_COMPOSE_K8S_DIR -n $APP_KUBERNETES_NAMESPACE
   fi
 
-  echo $COMMAND: Kubernetes manifests deployed successfully
+  echo Kubernetes manifests deployed successfully
 " || return 1
   done < <(get_kubernetes_contexts)
 
@@ -256,7 +259,7 @@ function patch_kubernetes_deployment() {
   local kubernetes_deployment_patch=$(get_kubernetes_deployment_patch_spec)
   
   cat <<EOF
-  $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DOCKER_APP_COMPOSE_K8S_DIR/*deployment* --patch '$kubernetes_deployment_patch'
+  $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DIB_APP_COMPOSE_K8S_DIR/*deployment* --patch '$kubernetes_deployment_patch'
 EOF
 }
 

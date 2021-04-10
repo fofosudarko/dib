@@ -11,21 +11,25 @@
 ## - start here
 
 function edit_file() {
-  local file="$1" file_copy="$2"
+  local file="$1" file_copy="$2" 
+  local directory=$(dirname "$file")
 
-  run_as "$DOCKER_USER" "[[ -s '$file' ]] && cp '$file' '$file_copy' ; exec $EDITOR_CMD '$file'"
+  check_path_validity "$directory"
+  create_directory_if_not_exist "$directory"
+
+  run_as "$DIB_USER" "[[ -s '$file' ]] && cp '$file' '$file_copy' ; exec $EDITOR_CMD '$file'"
 }
 
 function show_file() {
   local file="$1"
 
-  run_as "$DOCKER_USER" "exec $PAGER_CMD '$file'"
+  run_as "$DIB_USER" "exec $PAGER_CMD '$file'"
 }
 
 function locate_file() {
   local file="$1"
 
-  run_as "$DOCKER_USER" "exec ls '$file'"
+  run_as "$DIB_USER" "exec ls '$file'"
 }
 
 function parse_edit_command() {
@@ -58,13 +62,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_ENV_CHANGED_FILE" "$DOCKER_APP_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_ENV_CHANGED_FILE" "$DIB_APP_ENV_CHANGED_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_ENV_CHANGED_FILE"
+              show_file "$DIB_APP_ENV_CHANGED_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_ENV_CHANGED_FILE"
+              locate_file "$DIB_APP_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -72,13 +76,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-               edit_file "$DOCKER_APP_COMMON_ENV_CHANGED_FILE" "$DOCKER_APP_COMMON_ENV_CHANGED_FILE_COPY"
+               edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
             ;;
             show)
-               show_file "$DOCKER_APP_COMMON_ENV_CHANGED_FILE"
+               show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
             ;;
             path)
-               locate_file "$DOCKER_APP_COMMON_ENV_CHANGED_FILE"
+               locate_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -86,13 +90,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE" "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE" "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE"
+              show_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_SERVICE_ENV_CHANGED_FILE"
+              locate_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -100,13 +104,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE" "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE" "$DIB_APP_PROJECT_ENV_CHANGED_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE"
+              show_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_PROJECT_ENV_CHANGED_FILE"
+              locate_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -119,13 +123,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_CONFIG_DOCKER_FILE" "$DOCKER_APP_CONFIG_DOCKER_FILE_COPY"
+              edit_file "$DIB_APP_CONFIG_DOCKER_FILE" "$DIB_APP_CONFIG_DOCKER_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_CONFIG_DOCKER_FILE"
+              show_file "$DIB_APP_CONFIG_DOCKER_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_CONFIG_DOCKER_FILE"
+              locate_file "$DIB_APP_CONFIG_DOCKER_FILE"
             ;;
           esac
         ;;
@@ -133,13 +137,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE" "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY"
+              edit_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              show_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              locate_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
             ;;
           esac
         ;;
@@ -147,13 +151,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_CONFIG_RUN_SCRIPT" "$DOCKER_APP_CONFIG_RUN_SCRIPT_COPY"
+              edit_file "$DIB_APP_CONFIG_RUN_SCRIPT" "$DIB_APP_CONFIG_RUN_SCRIPT_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_CONFIG_RUN_SCRIPT"
+              show_file "$DIB_APP_CONFIG_RUN_SCRIPT"
             ;;
             path)
-              locate_file "$DOCKER_APP_CONFIG_RUN_SCRIPT"
+              locate_file "$DIB_APP_CONFIG_RUN_SCRIPT"
             ;;
           esac
         ;;
@@ -166,13 +170,13 @@ function parse_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE" "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY"
+              edit_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE" "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY"
             ;;
             show)
-              show_file "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              show_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
             ;;
             path)
-              locate_file "$DOCKER_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              locate_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
             ;;
           esac
         ;;
@@ -181,8 +185,8 @@ function parse_file_command() {
     k8s-annotations)
       if [[ -n "$file_resource" ]]
       then
-        k8s_annotations_file="${DOCKER_APP_K8S_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
-        k8s_annotations_file_copy="${DOCKER_APP_K8S_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
+        k8s_annotations_file="${DIB_APP_K8S_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
+        k8s_annotations_file_copy="${DIB_APP_K8S_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
 
         case "$command"
           in
@@ -214,6 +218,20 @@ function parse_file_command() {
               locate_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
             ;;
           esac
+        ;;
+      esac
+    ;;
+    cache)
+      case "$command"
+      in
+        edit)
+          edit_file "$DIB_APP_CACHE_FILE" "$DIB_APP_CACHE_FILE_COPY"
+        ;;
+        show)
+          show_file "$DIB_APP_CACHE_FILE"
+        ;;
+        path)
+          locate_file "$DIB_APP_CACHE_FILE"
         ;;
       esac
     ;;
