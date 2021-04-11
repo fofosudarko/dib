@@ -1,0 +1,5 @@
+README.md
+LICENSE
+exclude-files.txt
+makefile
+.git/
