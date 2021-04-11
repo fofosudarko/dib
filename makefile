@@ -33,12 +33,12 @@ check_bash:
 
 install:
 	@echo Installing to $(destination_folder) ...
-	mkdir -p $(destination_folder)
+	[[ -d $(destination_folder) ]] || mkdir -p $(destination_folder)
 	rsync -av --exclude-from=$(exclude_files) ./ $(destination_folder)
 
 link:
 	[[ -x $(main_program) ]] || chmod +x $(main_program)
-	ln -s $(main_program) $(bin_path)
+	[[ -h $(bin_path) ]] || ln -s $(main_program) $(bin_path)
 
 clean:
 	unlink $(bin_path)

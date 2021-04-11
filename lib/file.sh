@@ -20,6 +20,12 @@ function edit_file() {
   run_as "$DIB_USER" "[[ -s '$file' ]] && cp '$file' '$file_copy' ; exec $EDITOR_CMD '$file'"
 }
 
+function restore_file() {
+  local file_copy="$1" file="$2" 
+
+  run_as "$DIB_USER" "[[ -s '$file_copy' ]] && cp '$file_copy' '$file'"
+}
+
 function show_file() {
   local file="$1"
 
@@ -32,25 +38,43 @@ function locate_file() {
   run_as "$DIB_USER" "exec ls '$file'"
 }
 
-function parse_edit_command() {
-  local file_type="$1" file_resource="$2"
+function erase_file() {
+  local file="$1"
 
-  parse_file_command "edit" "$file_type" "$file_resource"
+  run_as "$DIB_USER" "exec cp /dev/null '$file'"
 }
 
-function parse_show_command() {
+function execute_edit_command() {
   local file_type="$1" file_resource="$2"
 
-  parse_file_command "show" "$file_type" "$file_resource"
+  execute_file_command "edit" "$file_type" "$file_resource"
 }
 
-function parse_path_command() {
+function execute_show_command() {
   local file_type="$1" file_resource="$2"
 
-  parse_file_command "path" "$file_type" "$file_resource"
+  execute_file_command "show" "$file_type" "$file_resource"
 }
 
-function parse_file_command() {
+function execute_path_command() {
+  local file_type="$1" file_resource="$2"
+
+  execute_file_command "path" "$file_type" "$file_resource"
+}
+
+function execute_erase_command() {
+  local file_type="$1" file_resource="$2"
+
+  execute_file_command "erase" "$file_type" "$file_resource"
+}
+
+function execute_restore_command() {
+  local file_type="$1" file_resource="$2"
+
+  execute_file_command "restore" "$file_type" "$file_resource"
+}
+
+function execute_file_command() {
   local command="$1" file_type="$2" file_resource="$3"
 
   case "$file_type"
@@ -70,19 +94,31 @@ function parse_file_command() {
             path)
               locate_file "$DIB_APP_ENV_CHANGED_FILE"
             ;;
+            erase)
+              erase_file "$DIB_APP_ENV_CHANGED_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_ENV_CHANGED_FILE_COPY" "$DIB_APP_ENV_CHANGED_FILE"
+            ;;
           esac
         ;;
         common-env)
           case "$command"
           in
             edit)
-               edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
             ;;
             show)
-               show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+              show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
             ;;
             path)
-               locate_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+              locate_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+            ;;
+            erase)
+              erase_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY" "$DIB_APP_COMMON_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -98,6 +134,12 @@ function parse_file_command() {
             path)
               locate_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
             ;;
+            erase)
+              erase_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY" "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
+            ;;
           esac
         ;;
         project-env)
@@ -111,6 +153,12 @@ function parse_file_command() {
             ;;
             path)
               locate_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
+            ;;
+            erase)
+              erase_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE_COPY" "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -131,6 +179,12 @@ function parse_file_command() {
             path)
               locate_file "$DIB_APP_CONFIG_DOCKER_FILE"
             ;;
+            erase)
+              erase_file "$DIB_APP_CONFIG_DOCKER_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_CONFIG_DOCKER_FILE_COPY" "$DIB_APP_CONFIG_DOCKER_FILE"
+            ;;
           esac
         ;;
         dockercomposefile)
@@ -145,6 +199,12 @@ function parse_file_command() {
             path)
               locate_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
             ;;
+            erase)
+              erase_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+            ;;
           esac
         ;;
         runscript)
@@ -158,6 +218,12 @@ function parse_file_command() {
             ;;
             path)
               locate_file "$DIB_APP_CONFIG_RUN_SCRIPT"
+            ;;
+            erase)
+              erase_file "$DIB_APP_CONFIG_RUN_SCRIPT"
+            ;;
+            restore)
+              restore_file "$DIB_APP_CONFIG_RUN_SCRIPT_COPY" "$DIB_APP_CONFIG_RUN_SCRIPT"
             ;;
           esac
         ;;
@@ -177,6 +243,12 @@ function parse_file_command() {
             ;;
             path)
               locate_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+            ;;
+            erase)
+              erase_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
             ;;
           esac
         ;;
@@ -199,6 +271,12 @@ function parse_file_command() {
             path)
               locate_file "$k8s_annotations_file"
             ;;
+            erase)
+              erase_file "$k8s_annotations_file"
+            ;;
+            restore)
+              restore_file "$k8s_annotations_file_copy" "$k8s_annotations_file"
+            ;;
         esac
       fi
     ;;
@@ -217,6 +295,12 @@ function parse_file_command() {
             path)
               locate_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
             ;;
+            erase)
+              erase_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
+            ;;
+            restore)
+              restore_file "$SPRINGBOOT_APPLICATION_PROPERTIES_COPY" "$SPRINGBOOT_APPLICATION_PROPERTIES"
+            ;;
           esac
         ;;
       esac
@@ -232,6 +316,12 @@ function parse_file_command() {
         ;;
         path)
           locate_file "$DIB_APP_CACHE_FILE"
+        ;;
+        erase)
+          erase_file "$DIB_APP_CACHE_FILE"
+        ;;
+        restore)
+          restore_file "$DIB_APP_CACHE_FILE_COPY" "$DIB_APP_CACHE_FILE"
         ;;
       esac
     ;;
