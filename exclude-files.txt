@@ -3,3 +3,4 @@ LICENSE
 exclude-files.txt
 makefile
 .git/
+build/
