@@ -454,7 +454,7 @@ function show_help() {
   exit 0
 }
 
-function import_envvars_from_cache_file() {
+function source_envvars_from_cache_file() {
   local rc_file="$1" tmp_location=$(mktemp)
 
   sed '/^export/!s/^/export /g' "$rc_file" 1> "$tmp_location"
@@ -462,7 +462,7 @@ function import_envvars_from_cache_file() {
   source "$tmp_location" && rm -f "$tmp_location"
 }
 
-function parse_env_command() {
+function execute_env_command() {
   local env_type="$1"
 
   case "$env_type"
@@ -576,7 +576,7 @@ DIB_APP_KUBERNETES_CONTEXT=$APP_KUBERNETES_CONTEXT
 EOF
 }
 
-function parse_init_command() {
+function execute_init_command() {
   
   function create_directories_on_init() {
     local directories=
@@ -593,7 +593,7 @@ function parse_init_command() {
   exit 0
 }
 
-function parse_go_command() {
+function execute_go_command() {
   
   function save_data_to_root_cache_on_go() {
   if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
@@ -618,9 +618,9 @@ EOF
   exit 0
 }
 
-function parse_checkout_command() {
+function execute_switch_command() {
   
-  function create_directories_on_checkout() {
+  function create_directories_on_switch() {
     local directories=
 
     DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
@@ -643,7 +643,7 @@ function parse_checkout_command() {
     create_directories_if_not_exist "$directories"
   }
 
-  function save_data_to_root_cache_on_checkout() {
+  function save_data_to_root_cache_on_switch() {
     if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
     then
       cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
@@ -672,17 +672,17 @@ EOF
   load_core
   check_parameter_validity "$APP_ENVIRONMENT" "$DIB_APP_ENVIRONMENT_PLACEHOLDER"
   check_app_environment_validity
-  create_directories_on_checkout
-  save_data_to_root_cache_on_checkout
+  create_directories_on_switch
+  save_data_to_root_cache_on_switch
   exit 0
 }
 
-function parse_status_command() {
+function execute_cache_command() {
   [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] && cat "$DIB_APP_ROOT_CACHE_FILE"
   exit 0
 }
 
-function parse_copy_command() {
+function execute_copy_command() {
   
   function create_directories_on_copy() {
     local directories=
@@ -737,6 +737,34 @@ EOF
   create_directories_on_copy
   copy_docker_project "$DIB_APP_BUILD_SRC" "$DIB_APP_BUILD_DEST"
   save_data_to_root_cache_on_copy
+  exit 0
+}
+
+function execute_reset_command() {
+  
+  function clear_root_cache() {
+    cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+DIB_APP_FRAMEWORK=
+DIB_APP_PROJECT=
+DIB_APP_IMAGE=
+DIB_APP_ENVIRONMENT=
+DIB_APP_CONFIG_DIR=
+DIB_APP_COMPOSE_DIR=
+DIB_APP_COMPOSE_K8S_DIR=
+DIB_APP_K8S_ANNOTATIONS_DIR=
+DIB_APP_PROJECT_ENV_DIR=
+DIB_APP_SERVICE_ENV_DIR=
+DIB_APP_COMMON_ENV_DIR=
+DIB_APP_CACHE_DIR=
+DIB_APP_KEYSTORES_SRC=
+DIB_APP_BUILD_SRC=
+DIB_APP_BUILD_DEST=
+DIB_CI_JOB=
+DIB_APP_KEYSTORES_DEST=
+EOF
+  }
+  
+  clear_root_cache
   exit 0
 }
 

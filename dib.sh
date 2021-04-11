@@ -15,7 +15,7 @@ set -eu
 : ${SCRIPT_DIR=$(dirname $(realpath ${BASH_SOURCE[0]}))}
 : ${LIB_DIR="${SCRIPT_DIR}/lib"}
 
-function load_common_functions() {  
+function load_init_functions() {  
   source "$LIB_DIR/common.sh"
 }
 
@@ -49,7 +49,7 @@ function load_more_functions() {
 function load_cache_file() {
   if [[ -f "$DIB_APP_CACHE_FILE" ]]
   then
-    import_envvars_from_cache_file "$DIB_APP_CACHE_FILE"
+    source_envvars_from_cache_file "$DIB_APP_CACHE_FILE"
   else
     :
   fi
@@ -58,7 +58,7 @@ function load_cache_file() {
 function load_root_cache_file() {
   if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
   then
-    import_envvars_from_cache_file "$DIB_APP_ROOT_CACHE_FILE"
+    source_envvars_from_cache_file "$DIB_APP_ROOT_CACHE_FILE"
   else
     :
   fi
@@ -72,7 +72,7 @@ function deploy_to_k8s_cluster() {
 }
 
 load_commands
-load_common_functions
+load_init_functions
 
 if [[ "$#" -lt 1 ]]
 then
@@ -119,7 +119,9 @@ then
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]] || \
      [[ "$DIB_RUN_COMMAND" == "show" ]] || \
-     [[ "$DIB_RUN_COMMAND" == "path" ]]
+     [[ "$DIB_RUN_COMMAND" == "path" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "restore" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "erase" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
@@ -145,7 +147,7 @@ then
   fi
 elif [[ "$DIB_RUN_COMMAND" == "init" ]]
 then
-  parse_init_command
+  execute_init_command
 elif [[ "$DIB_RUN_COMMAND" == "go" ]]
 then
   if [[ "$#" -ge 3 ]]
@@ -160,8 +162,8 @@ then
     DIB_APP_PROJECT="$DIB_APP_IMAGE"
   fi
 
-  parse_go_command
-elif [[ "$DIB_RUN_COMMAND" == "checkout" ]]
+  execute_go_command
+elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
 then
   if [[ "$#" -ge 2 ]]
   then
@@ -169,7 +171,7 @@ then
     DIB_APP_ENVIRONMENT="$2"
   fi
 
-  parse_checkout_command
+  execute_switch_command
 elif [[ "$DIB_RUN_COMMAND" == "copy" ]]
 then
   if [[ "$#" -ge 2 ]]
@@ -178,16 +180,19 @@ then
     DIB_APP_BUILD_SRC="$2"
   fi
 
-  parse_copy_command
-elif [[ "$DIB_RUN_COMMAND" == "status" ]]
+  execute_copy_command
+elif [[ "$DIB_RUN_COMMAND" == "cache" ]]
 then
-  parse_status_command
+  execute_cache_command
 elif [[ "$DIB_RUN_COMMAND" == "help" ]]
 then
   show_help
 elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
 then
   check_app_dependencies
+elif [[ "$DIB_RUN_COMMAND" == "reset" ]]
+then
+  execute_reset_command
 fi
 
 load_core
@@ -222,24 +227,30 @@ then
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
-  parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "show" ]]
 then
-  parse_show_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_show_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "path" ]]
 then
-  parse_path_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_path_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "erase" ]]
+then
+  execute_erase_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "restore" ]]
+then
+  execute_restore_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
 then
   if [[ -z "$DIB_ENV_TYPE" ]]
   then
     get_all_envvars
   else
-    parse_env_command "$DIB_ENV_TYPE"
+    execute_env_command "$DIB_ENV_TYPE"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
-  parse_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 else
   msg "Run command '$DIB_RUN_COMMAND' unknown"
   exit 1
