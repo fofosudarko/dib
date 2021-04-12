@@ -193,6 +193,9 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "reset" ]]
 then
   execute_reset_command
+else
+  msg "Run command '$DIB_RUN_COMMAND' unknown"
+  exit 1
 fi
 
 load_core
