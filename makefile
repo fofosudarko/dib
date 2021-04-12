@@ -40,12 +40,12 @@ check_bash:
 
 install:
 	@echo Installing to $(destination_folder) ...
-	[[ -d $(destination_folder) ]] || mkdir -p $(destination_folder)
+	test -d $(destination_folder) || mkdir -p $(destination_folder)
 	rsync -av --exclude-from=$(copy_exclusions) $(source_folder)/ $(destination_folder)
 
 link:
-	[[ -x $(main_program) ]] || chmod +x $(main_program)
-	[[ -h $(bin_path) ]] || ln -s $(main_program) $(bin_path)
+	test -x $(main_program) || chmod +x $(main_program)
+	test -h $(bin_path) || ln -s $(main_program) $(bin_path)
 
 clean:
 	unlink $(bin_path)
