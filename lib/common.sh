@@ -54,10 +54,8 @@ function copy_docker_project() {
     hgignore_patterns="$(extract_exclude_patterns "$ci_project/.hgignore")"
   fi
   
-  run_as "$DIB_USER" "
   rm -rf $docker_project/*
   rsync -av --exclude='.git/' $gitignore_patterns $hgignore_patterns $ci_project/ $docker_project
-"
 }
 
 function copy_docker_build_files() { 
@@ -71,7 +69,7 @@ function copy_docker_build_files() {
 
   format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
   
-  run_as "$DIB_USER" "rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project"
+  rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project
 }
 
 function copy_config_files() {
@@ -82,7 +80,7 @@ function copy_config_files() {
 
   ensure_paths_exist "$config_dir $app_build_dest"
   
-  run_as "$DIB_USER" "rsync -av $exclude_patterns $config_dir/ $app_build_dest"
+  rsync -av $exclude_patterns $config_dir/ $app_build_dest
 }
 
 function format_docker_compose_template() {
@@ -90,31 +88,29 @@ function format_docker_compose_template() {
   
   if [[ -s "$docker_compose_template" ]]
   then
-    run_as "$DIB_USER" "
-      sed -e 's/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g' \
-      -e 's/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g' \
-      -e 's/@@DIB_CONTAINER_REGISTRY@@/${DIB_APPS_CONTAINER_REGISTRY}/g' \
-      -e 's/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g' \
-      -e 's/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g' \
-      -e 's/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g' \
-      -e 's/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g' \
-      -e 's/@@DIB_KOMPOSE_IMAGE_PULL_SECRET@@/${KOMPOSE_IMAGE_PULL_SECRET}/g' \
-      -e 's/@@DIB_KOMPOSE_IMAGE_PULL_POLICY@@/${KOMPOSE_IMAGE_PULL_POLICY}/g' \
-      -e 's/@@DIB_KOMPOSE_SERVICE_TYPE@@/${KOMPOSE_SERVICE_TYPE}/g' \
-      -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE@@/${KOMPOSE_SERVICE_EXPOSE}/g' \
-      -e 's/@@DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET@@/${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET}/g' \
-      -e 's/@@DIB_KOMPOSE_SERVICE_NODEPORT_PORT@@/${KOMPOSE_SERVICE_NODEPORT_PORT}/g' \
-      -e 's/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF/\//\\/}/g' \
-      -e 's/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL/\//\\/}/g' \
-      -e 's/@@DIB_APP_BUILD_CONFIGURATION@@/${APP_BUILD_CONFIGURATION}/g' \
-      -e 's/@@DIB_APP_REPO@@/${APP_REPO}/g' \
-      -e 's/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g' \
-      -e 's/@@DIB_DOCKER_COMPOSE_NETWORK_MODE@@/${DOCKER_COMPOSE_NETWORK_MODE}/g' \
-      -e 's/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g' \
-      -e 's/@@DIB_APP_PORT@@/${APP_PORT}/g' '$docker_compose_template' 1> '$docker_compose_out'
-    "
+    sed -e "s/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g" \
+    -e "s/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g" \
+    -e "s/@@DIB_CONTAINER_REGISTRY@@/${DIB_APPS_CONTAINER_REGISTRY}/g" \
+    -e "s/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g" \
+    -e "s/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g" \
+    -e "s/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g" \
+    -e "s/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g" \
+    -e "s/@@DIB_KOMPOSE_IMAGE_PULL_SECRET@@/${KOMPOSE_IMAGE_PULL_SECRET}/g" \
+    -e "s/@@DIB_KOMPOSE_IMAGE_PULL_POLICY@@/${KOMPOSE_IMAGE_PULL_POLICY}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_TYPE@@/${KOMPOSE_SERVICE_TYPE}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_EXPOSE@@/${KOMPOSE_SERVICE_EXPOSE}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET@@/${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_NODEPORT_PORT@@/${KOMPOSE_SERVICE_NODEPORT_PORT}/g" \
+    -e "s/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF/\//\\/}/g" \
+    -e "s/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL/\//\\/}/g" \
+    -e "s/@@DIB_APP_BUILD_CONFIGURATION@@/${APP_BUILD_CONFIGURATION}/g" \
+    -e "s/@@DIB_APP_REPO@@/${APP_REPO}/g" \
+    -e "s/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g" \
+    -e "s/@@DIB_DOCKER_COMPOSE_NETWORK_MODE@@/${DOCKER_COMPOSE_NETWORK_MODE}/g" \
+    -e "s/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g" \
+    -e "s/@@DIB_APP_PORT@@/${APP_PORT}/g" "$docker_compose_template" 1> "$docker_compose_out"
   else
-    run_as "$DIB_USER" "[[ ! -f '$docker_compose_out' ]] && touch '$docker_compose_out'"
+    [[ ! -f "$docker_compose_out" ]] && touch "$docker_compose_out"
   fi
 }
 
@@ -123,16 +119,12 @@ function update_env_file() {
   
   if [[ -s "$changed_env_file" ]]
   then
-    run_as "$DIB_USER" "
     cp $changed_env_file $original_env_file 2> /dev/null
     cp $changed_env_file $env_file 2> /dev/null
-    [[ -h '$symlinked_env_file' ]] || ln -s $env_file $symlinked_env_file 2> /dev/null
-  "
+    [[ -h "$symlinked_env_file" ]] || ln -s $env_file $symlinked_env_file 2> /dev/null
   else
-    run_as "$DIB_USER" "
     test -f $changed_env_file || \
       touch $changed_env_file && cp $changed_env_file $env_file && ln -s $env_file $symlinked_env_file
-  "
   fi
 }
 
@@ -160,12 +152,11 @@ function abort_build_process() {
 function create_directory_if_not_exist() {
   local directory="$1"
 
-  run_as "$DIB_USER" "[[ -d '$directory' ]] || mkdir -p '$directory'"
+  [[ -d "$directory" ]] || mkdir -p "$directory"
 }
 
 function create_default_directories_on_init() {
-  run_as "$DIB_USER" "
-  defaultDirs=(
+  local default_directories=(
     ${DIB_CACHE}
     ${DIB_APPS_DIR}
     ${DIB_APPS_CONFIG_DIR}
@@ -178,33 +169,28 @@ function create_default_directories_on_init() {
     ${DIB_APP_CACHE_DIR}
   )
 
-  for defaultDir in \${defaultDirs[@]}
+  for default_directory in ${default_directories[@]}
   do
-    [[ -d \"\$defaultDir\" ]] || mkdir -p \"\$defaultDir\"
+    [[ -d "$default_directory" ]] || mkdir -p "$default_directory"
   done
-"
 }
 
 function ensure_paths_exist() {
   local paths="$1"
 
-  run_as "$DIB_USER" "
   for path in $paths
   do
-    [[ -e \"\$path\" ]] || { echo \"\$path must exist before.\"; exit 1; } 
+    [[ -e "$path" ]] || { echo "$path must exist before."; exit 1; } 
   done
-" || exit 1
 }
 
 function create_directories_if_not_exist() {
   local directories="$1"
 
-  run_as "$DIB_USER" "
   for directory in $directories
   do
-    [[ -d \"\$directory\" ]] || mkdir -p \$directory 
+    [[ -d "$directory" ]] || mkdir -p $directory 
   done
-"
 }
 
 function ensure_dir_paths_exist() {
@@ -236,10 +222,10 @@ function set_app_frontend_build_mode() {
   case "$APP_BUILD_MODE"
   in
     spa)
-      run_as "$DIB_USER" "cp $DIB_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE"
+      cp $DIB_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE
     ;;
     universal)
-      run_as "$DIB_USER" "cp $DIB_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE"
+      cp $DIB_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE
     ;;
     *)
       msg "app build mode '$APP_BUILD_MODE' unknown"
