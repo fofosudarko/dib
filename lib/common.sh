@@ -440,12 +440,12 @@ function show_help() {
   exit 0
 }
 
-function source_envvars_from_cache_file() {
-  local rc_file="$1" tmp_location=$(mktemp)
+function source_envvars_from_file() {
+  local file="$1" tmp_file=$(mktemp)
 
-  sed '/^export/!s/^/export /g' "$rc_file" 1> "$tmp_location"
+  sed '/^export/!s/^/export /g' "$file" 1> "$tmp_file"
 
-  source "$tmp_location" && rm -f "$tmp_location"
+  source "$tmp_file" && rm -f "$tmp_file"
 }
 
 function execute_env_command() {
@@ -579,9 +579,9 @@ function execute_init_command() {
   exit 0
 }
 
-function execute_go_command() {
+function execute_goto_command() {
   
-  function save_data_to_root_cache_on_go() {
+  function save_data_to_root_cache_on_goto() {
   if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
   then
     cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
@@ -600,7 +600,7 @@ EOF
   check_parameter_validity "$APP_PROJECT" "$DIB_APP_PROJECT_PLACEHOLDER"
   check_parameter_validity "$APP_IMAGE" "$DIB_APP_IMAGE_PLACEHOLDER"
   check_app_framework_validity
-  save_data_to_root_cache_on_go
+  save_data_to_root_cache_on_goto
   exit 0
 }
 
@@ -656,7 +656,11 @@ EOF
   }
 
   load_core
+  check_parameter_validity "$APP_FRAMEWORK" "$DIB_APP_FRAMEWORK_PLACEHOLDER"
+  check_parameter_validity "$APP_PROJECT" "$DIB_APP_PROJECT_PLACEHOLDER"
+  check_parameter_validity "$APP_IMAGE" "$DIB_APP_IMAGE_PLACEHOLDER"
   check_parameter_validity "$APP_ENVIRONMENT" "$DIB_APP_ENVIRONMENT_PLACEHOLDER"
+  check_app_framework_validity
   check_app_environment_validity
   create_directories_on_switch
   save_data_to_root_cache_on_switch
@@ -752,6 +756,47 @@ EOF
   
   clear_root_cache
   exit 0
+}
+
+function substitute_core_variables_if_changed() {
+
+  if [[ -n "$USER_DIB_APP_PROJECT" && "$DIB_APP_PROJECT" != "$USER_DIB_APP_PROJECT" ]]
+  then
+    export DIB_APP_PROJECT=$USER_DIB_APP_PROJECT
+  fi
+
+  if [[ -n "$USER_DIB_APP_FRAMEWORK" &&  "$DIB_APP_FRAMEWORK" != "$USER_DIB_APP_FRAMEWORK" ]]
+  then
+    export DIB_APP_FRAMEWORK=$USER_DIB_APP_FRAMEWORK
+  fi
+
+  if [[ -n "$USER_DIB_APP_IMAGE" && "$DIB_APP_IMAGE" != "$USER_DIB_APP_IMAGE" ]]
+  then
+    export DIB_APP_IMAGE=$USER_DIB_APP_IMAGE
+  fi
+}
+
+function substitute_other_variables_if_changed() {
+
+  if [[ -n "$USER_DIB_APP_BUILD_SRC" && "$DIB_APP_BUILD_SRC" != "$USER_DIB_APP_BUILD_SRC" ]]
+  then
+    export DIB_APP_BUILD_SRC=$USER_DIB_APP_BUILD_SRC
+  fi
+
+  if [[ -n "$USER_DIB_APP_BUILD_DEST" && "$DIB_APP_BUILD_DEST" != "$USER_DIB_APP_BUILD_DEST" ]]
+  then
+    export DIB_APP_BUILD_DEST=$USER_DIB_APP_BUILD_DEST
+  fi
+
+  if [[ -n "$USER_DIB_APP_IMAGE_TAG" && "$DIB_APP_IMAGE_TAG" != "$USER_DIB_APP_IMAGE_TAG" ]]
+  then
+    export DIB_APP_IMAGE_TAG=$USER_DIB_APP_IMAGE_TAG
+  fi
+
+  if [[ -n "$USER_DIB_APP_ENVIRONMENT" && "$DIB_APP_ENVIRONMENT" != "$USER_DIB_APP_ENVIRONMENT" ]]
+  then
+    export DIB_APP_ENVIRONMENT=$USER_DIB_APP_ENVIRONMENT
+  fi
 }
 
 ## -- finish
