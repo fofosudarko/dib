@@ -49,7 +49,7 @@ function load_more_functions() {
 function load_cache_file() {
   if [[ -f "$DIB_APP_CACHE_FILE" ]]
   then
-    source_envvars_from_cache_file "$DIB_APP_CACHE_FILE"
+    source_envvars_from_file "$DIB_APP_CACHE_FILE"
   else
     :
   fi
@@ -58,7 +58,7 @@ function load_cache_file() {
 function load_root_cache_file() {
   if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
   then
-    source_envvars_from_cache_file "$DIB_APP_ROOT_CACHE_FILE"
+    source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE"
   else
     :
   fi
@@ -84,6 +84,13 @@ DIB_RUN_COMMAND="${1:-build}"
 shift
 
 DIB_HOME=${DIB_HOME/\~/$HOME}
+USER_DIB_APP_BUILD_SRC=
+USER_DIB_APP_BUILD_DEST=
+USER_DIB_APP_PROJECT=
+USER_DIB_APP_FRAMEWORK=
+USER_DIB_APP_ENVIRONMENT=
+USER_DIB_APP_IMAGE=
+USER_DIB_APP_IMAGE_TAG=
 DIB_APP_BUILD_SRC=
 DIB_APP_BUILD_DEST=
 DIB_APP_PROJECT=
@@ -114,8 +121,8 @@ if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
 then
   if [[ "$#" -ge 2 ]] 
   then
-    DIB_APP_IMAGE="$1"
-    DIB_APP_IMAGE_TAG="$2"
+    USER_DIB_APP_IMAGE="$1"
+    USER_DIB_APP_IMAGE_TAG="$2"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]] || \
      [[ "$DIB_RUN_COMMAND" == "show" ]] || \
@@ -125,12 +132,12 @@ elif [[ "$DIB_RUN_COMMAND" == "edit" ]] || \
 then
   if [[ "$#" -ge 3 ]]
   then
-    DIB_APP_IMAGE="$1"
+    USER_DIB_APP_IMAGE="$1"
     DIB_FILE_TYPE="$2"
     DIB_FILE_RESOURCE="$3"
   elif [[ "$#" -ge 2 ]]
   then
-    DIB_APP_IMAGE="$1"
+    USER_DIB_APP_IMAGE="$1"
     DIB_FILE_TYPE="$2"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
@@ -140,65 +147,70 @@ elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
   if [[ "$#" -ge 4 ]]
   then
-    DIB_APP_IMAGE="$1"
+    USER_DIB_APP_IMAGE="$1"
     DIB_FILE_TYPE="$2"
     DIB_FILE_RESOURCE="$3"
-    DIB_APP_IMAGE_TAG="$4"
+    USER_DIB_APP_IMAGE_TAG="$4"
   fi
 elif [[ "$DIB_RUN_COMMAND" == "init" ]]
 then
   execute_init_command
-elif [[ "$DIB_RUN_COMMAND" == "go" ]]
+elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
-    DIB_APP_FRAMEWORK="$1"
-    DIB_APP_PROJECT="$2"
-    DIB_APP_IMAGE="$3"
+    USER_DIB_APP_FRAMEWORK="$1"
+    USER_DIB_APP_PROJECT="$2"
+    USER_DIB_APP_IMAGE="$3"
   elif [[ "$#" -ge 2 ]]
   then
-    DIB_APP_FRAMEWORK="$1"
-    DIB_APP_IMAGE="$2"
-    DIB_APP_PROJECT="$DIB_APP_IMAGE"
+    USER_DIB_APP_FRAMEWORK="$1"
+    USER_DIB_APP_IMAGE="$2"
+    USER_DIB_APP_PROJECT="$USER_DIB_APP_IMAGE"
   fi
-
-  execute_go_command
 elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
 then
   if [[ "$#" -ge 2 ]]
   then
-    DIB_APP_IMAGE="$1"
-    DIB_APP_ENVIRONMENT="$2"
+    USER_DIB_APP_IMAGE="$1"
+    USER_DIB_APP_ENVIRONMENT="$2"
   fi
-
-  execute_switch_command
 elif [[ "$DIB_RUN_COMMAND" == "copy" ]]
 then
   if [[ "$#" -ge 2 ]]
   then
-    DIB_APP_IMAGE="$1"
-    DIB_APP_BUILD_SRC="$2"
+    USER_DIB_APP_IMAGE="$1"
+    USER_DIB_APP_BUILD_SRC="$2"
   fi
-
-  execute_copy_command
-elif [[ "$DIB_RUN_COMMAND" == "cache" ]]
-then
-  execute_cache_command
 elif [[ "$DIB_RUN_COMMAND" == "help" ]]
 then
   show_help
 elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
 then
   check_app_dependencies
+fi
+
+substitute_core_variables_if_changed
+load_core
+substitute_other_variables_if_changed
+
+if [[ "$DIB_RUN_COMMAND" == "copy" ]]
+then
+  execute_copy_command
+elif [[ "$DIB_RUN_COMMAND" == "cache" ]]
+then
+  execute_cache_command
 elif [[ "$DIB_RUN_COMMAND" == "reset" ]]
 then
   execute_reset_command
-else
-  msg "Run command '$DIB_RUN_COMMAND' unknown"
-  exit 1
+elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
+then
+  execute_switch_command
+elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
+then
+  execute_goto_command
 fi
 
-load_core
 load_paths
 load_cache_file
 load_template
@@ -253,7 +265,7 @@ then
   fi
 elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
-  execute_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  msg 'Oops, not implemented yet.'
 else
   msg "Run command '$DIB_RUN_COMMAND' unknown"
   exit 1

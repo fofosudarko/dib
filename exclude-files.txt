@@ -5,3 +5,4 @@ makefile
 .git/
 build/
 .DS_Store
+.gitignore

@@ -1,7 +1,7 @@
 # makefile
 
 .PHONY : dib check_requirements check_docker check_docker_compose \
-				 check_kompose check_kubectl check_bash install link clean build
+				 check_kompose check_kubectl check_bash install link uninstall build
 
 source_folder = .
 app_name = dib
@@ -47,9 +47,10 @@ link:
 	test -x $(main_program) || chmod +x $(main_program)
 	test -h $(bin_path) || ln -s $(main_program) $(bin_path)
 
-clean:
-	unlink $(bin_path)
-	rm -rf $(destination_folder)
+uninstall:
+	@echo Removing $(bin_path) ...
+	test ! -e $(bin_path) || unlink $(bin_path)
+	test ! -d $(destination_folder) || rm -rf $(destination_folder)
 
 build:
 	@echo Bundling app to $(build) ...
