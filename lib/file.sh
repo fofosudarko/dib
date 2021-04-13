@@ -17,31 +17,33 @@ function edit_file() {
   check_path_validity "$directory"
   create_directory_if_not_exist "$directory"
 
-  run_as "$DIB_USER" "[[ -s '$file' ]] && cp '$file' '$file_copy' ; exec $EDITOR_CMD '$file'"
+  [[ -s "$file" ]] && cp "$file" "$file_copy"
+
+  exec $EDITOR_CMD "$file"
 }
 
 function restore_file() {
   local file_copy="$1" file="$2" 
 
-  run_as "$DIB_USER" "[[ -s '$file_copy' ]] && cp '$file_copy' '$file'"
+  [[ -s "$file_copy" ]] && cp "$file_copy" "$file"
 }
 
 function show_file() {
   local file="$1"
 
-  run_as "$DIB_USER" "exec $PAGER_CMD '$file'"
+  exec $PAGER_CMD "$file"
 }
 
 function locate_file() {
   local file="$1"
 
-  run_as "$DIB_USER" "exec ls '$file'"
+  exec ls "$file"
 }
 
 function erase_file() {
   local file="$1"
 
-  run_as "$DIB_USER" "exec cp /dev/null '$file'"
+  exec cp /dev/null "$file"
 }
 
 function execute_edit_command() {

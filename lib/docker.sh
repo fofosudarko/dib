@@ -17,9 +17,7 @@ function build_springboot_docker_image() {
 
   msg 'Building springboot docker image ...'
 
-  check_docker_file=$(run_as "$DIB_USER" "test -f $docker_file; echo -ne \$?")
-
-  if [[ "$check_docker_file" != "0" ]]
+  if [[ ! -f "$docker_file" ]]
   then
     msg 'no Dockerfile found'
     exit 1
@@ -29,9 +27,9 @@ function build_springboot_docker_image() {
   add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
   add_springboot_keystores "$docker_file" "$DIB_APP_KEYSTORES_SRC" "$DIB_APP_KEYSTORES_DEST"
 
-  run_as "$DIB_USER" "$DOCKER_CMD build -t '$target_image' $DIB_APP_BUILD_DEST; exit \$?" || image_build_status=1
+  $DOCKER_CMD build -t "$target_image" $DIB_APP_BUILD_DEST
 
-  return "$image_build_status"
+  return "$?"
 }
 
 function build_docker_image_from_compose_file() {
@@ -40,25 +38,21 @@ function build_docker_image_from_compose_file() {
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
   local image_build_status=0
 
-  run_as "$DIB_USER" "
-  if [[ ! -f '$docker_file' ]]
+  if [[ ! -f "$docker_file" ]]
   then
     echo No Dockerfile found
     exit 1
   fi
 
-  if [[ ! -f '$docker_compose_file' ]]
+  if [[ ! -f "$docker_compose_file" ]]
   then
     echo No docker-compose file found
     exit 1
   fi
 
-  exit 0
-" || exit 1
+  $DOCKER_COMPOSE_CMD -f $docker_compose_file build
 
-  run_as "$DIB_USER" "$DOCKER_COMPOSE_CMD -f $docker_compose_file build; exit \$?" || image_build_status=1
-
-  return "$image_build_status"
+  return "$?"
 }
 
 function build_docker_image_from_file() {
@@ -66,19 +60,15 @@ function build_docker_image_from_file() {
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
   local image_build_status=0
 
-  run_as "$DIB_USER" "
-  if [[ ! -f '$docker_file' ]]
+  if [[ ! -f "$docker_file" ]]
   then
     echo No Dockerfile found
     exit 1
   fi
 
-  exit 0
-" || exit 1
+  $DOCKER_CMD build -t "$target_image" $DIB_APP_BUILD_DEST
 
-  run_as "$DIB_USER" "$DOCKER_CMD build -t '$target_image' $DIB_APP_BUILD_DEST; exit \$?" || image_build_status=1
-
-  return "$image_build_status"
+  return "$?"
 }
 
 function build_angular_docker_image() {
@@ -179,13 +169,11 @@ function push_docker_image() {
 
   msg 'Pushing docker image ...'
 
-  run_as "$DIB_USER" "
   $DOCKER_CMD logout 2> /dev/null
-  $DOCKER_CMD login --username '$DOCKER_LOGIN_USERNAME' --password-stdin < '$DOCKER_LOGIN_PASSWORD' '$DIB_APPS_CONTAINER_REGISTRY'
-  $DOCKER_CMD tag '$target_image' '$remote_target_image'
-  $DOCKER_CMD push '$remote_target_image'
+  $DOCKER_CMD login --username "$DOCKER_LOGIN_USERNAME" --password-stdin < "$DOCKER_LOGIN_PASSWORD" "$DIB_APPS_CONTAINER_REGISTRY"
+  $DOCKER_CMD tag "$target_image" "$remote_target_image"
+  $DOCKER_CMD push "$remote_target_image"
   $DOCKER_CMD logout 2> /dev/null
-"
 }
 
 ## -- finish
