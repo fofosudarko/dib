@@ -19,6 +19,8 @@
 : ${DIB_APP_FRAMEWORKS='^(springboot|angular|react|flask|express|mux|feathers|nuxt|next)$'}
 : ${DIB_APP_INVALID_PATH_TOKENS='example\-(project|framework|environment|service)'}
 : ${DIB_APP_CONFIG_EXCLUDE_PATTERNS='*Dockerfile*\n*docker-compose*\n*application*properties\n'}
+: ${DIB_APP_DATABASE_KEY_PATTERN='^[[:alnum:]]+$'}
+: ${DIB_APP_DATABASE_VALUE_PATTERN='^[[:alnum:]]+\:[[:alnum:]_-]+\:[[:alnum:]_-]+$'}
 
 # globals
 
@@ -42,6 +44,9 @@
 : ${DIB_APP_IMAGE_PLACEHOLDER='example-service'}
 : ${DIB_APP_FRAMEWORK_PLACEHOLDER='example-framework'}
 : ${DIB_APP_ENVIRONMENT_PLACEHOLDER='example-environment'}
+: ${DIB_APP_VERSION='v1.0.0-rc2'}
+
+# dirs
 
 : ${DIB_HOME=${DIB_HOME:-$DIB_HOME_PLACEHOLDER}}
 : ${DIB_CACHE="${DIB_HOME}/.cache"}
@@ -53,12 +58,17 @@
 : ${DIB_APPS_K8S_ANNOTATIONS_DIR="$DIB_HOME/k8s-annotations"}
 : ${DIB_APPS_KUBERNETES_DIR="$DIB_HOME/.kube"}
 : ${DIB_APPS_CACHE_DIR="$DIB_HOME/cache"}
-: ${DIB_APP_ROOT_CACHE_FILE="$DIB_APPS_CACHE_DIR/root_cache"}
-: ${DIB_APP_ROOT_CACHE_FILE_COPY="${DIB_APP_ROOT_CACHE_FILE}.copy"}
-: ${DIB_APP_VERSION='v1.0.0-rc2'}
 
 # templates
 
-: ${K8S_RESOURCE_TEMPLATE='@@K8S_RESOURCE_ANNOTATION@@'}
+: ${K8S_RESOURCE_TEMPLATE='@@K8S_RESOURCE_TEMPLATE@@'}
+: ${ROOT_CACHE_DIR_TEMPLATE='@@ROOT_CACHE_DIR_TEMPLATE@@'}
+
+# files
+
+DIB_APP_DATABASE_FILE="$DIB_APPS_CACHE_DIR/.dib-database"
+DIB_APP_DATABASE_FILE_COPY="${DIB_APP_DATABASE_FILE}.copy"
+DIB_APP_ROOT_CACHE_FILE="$DIB_APPS_CACHE_DIR/$ROOT_CACHE_DIR_TEMPLATE/root_cache"
+DIB_APP_ROOT_CACHE_FILE_COPY="${DIB_APP_ROOT_CACHE_FILE}.copy"
 
 ## -- finish
