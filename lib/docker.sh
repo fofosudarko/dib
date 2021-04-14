@@ -201,7 +201,7 @@ function is_docker_container_paused() {
 }
 
 function columnize_items() {
-  echo -ne "$1" | sed -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
+  echo -ne "$1" | sed -E -e 's/[[:space:]]+//g' -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
 }
 
 function run_docker_container() {
@@ -285,7 +285,7 @@ function stop_docker_container() {
   fi
 }
 
-function show_docker_container() {
+function ps_docker_container() {
   msg 'Showing docker container ...'
 
   $DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --all

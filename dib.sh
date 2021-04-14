@@ -56,6 +56,14 @@ function load_cache_file() {
 }
 
 function load_root_cache_file() {
+  if [[ -z "$DIB_APP_KEY" ]]
+  then
+    msg "Please provide DIB_APP_KEY and try again."
+    exit 1
+  fi
+
+  format_root_cache_file
+
   if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
   then
     source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE"
@@ -64,26 +72,19 @@ function load_root_cache_file() {
   fi
 }
 
-function deploy_to_k8s_cluster() {
-  if ! deploy_to_kubernetes_cluster 
-  then
-    msg 'Kubernetes manifests deployed unsuccessfully'
-  fi
-}
-
 load_commands
 load_init_functions
 
 if [[ "$#" -lt 1 ]]
 then
-  show_help
-  exit 0
+  execute_help_command
 fi
 
 DIB_RUN_COMMAND="${1:-build}"
 shift
 
 DIB_HOME=${DIB_HOME/\~/$HOME}
+DIB_APP_KEY=${DIB_APP_KEY:-''}
 USER_DIB_APP_BUILD_SRC=
 USER_DIB_APP_BUILD_DEST=
 USER_DIB_APP_PROJECT=
@@ -93,6 +94,7 @@ USER_DIB_APP_IMAGE=
 USER_DIB_APP_IMAGE_TAG=
 USER_DIB_APP_PORTS=
 USER_DIB_APP_ENV_FILES=
+USER_DIB_APP_GET_VALUE=
 DIB_APP_BUILD_SRC=
 DIB_APP_BUILD_DEST=
 DIB_APP_PROJECT=
@@ -116,7 +118,49 @@ DIB_APP_CONTAINERS_RESTART=0
 KUBECONFIG=
 
 load_init
-load_root_cache_file
+
+if [[ "$DIB_RUN_COMMAND" == "goto" ]]
+then
+  if [[ "$#" -ge 3 ]]
+  then
+    USER_DIB_APP_FRAMEWORK="$1"
+    USER_DIB_APP_PROJECT="$2"
+    USER_DIB_APP_IMAGE="$3"
+  elif [[ "$#" -ge 2 ]]
+  then
+    USER_DIB_APP_FRAMEWORK="$1"
+    USER_DIB_APP_IMAGE="$2"
+    USER_DIB_APP_PROJECT="$USER_DIB_APP_IMAGE"
+  fi
+
+  update_core_variables_if_changed
+  execute_goto_command
+elif [[ "$DIB_RUN_COMMAND" == "help" ]]
+then
+  execute_help_command
+elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
+then
+  execute_doctor_command
+elif [[ "$DIB_RUN_COMMAND" == "get-key" ]]
+then
+  if [[ "$#" -ge 1 ]]
+  then
+    USER_DIB_APP_GET_VALUE="$1"
+  fi
+
+  execute_get_key_command "$USER_DIB_APP_GET_VALUE"
+elif [[ "$DIB_RUN_COMMAND" == "get-project" ]]
+then
+  if [[ "$#" -ge 1 ]]
+  then
+    USER_DIB_APP_GET_VALUE="$1"
+  fi
+
+  execute_get_project_command "$USER_DIB_APP_GET_VALUE"
+elif [[ "$DIB_RUN_COMMAND" == "version" ]]
+then
+  execute_version_command
+fi
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
    [[ "$DIB_RUN_COMMAND" == "build-push" ]] || \
@@ -161,19 +205,6 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "init" ]]
 then
   execute_init_command
-elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
-then
-  if [[ "$#" -ge 3 ]]
-  then
-    USER_DIB_APP_FRAMEWORK="$1"
-    USER_DIB_APP_PROJECT="$2"
-    USER_DIB_APP_IMAGE="$3"
-  elif [[ "$#" -ge 2 ]]
-  then
-    USER_DIB_APP_FRAMEWORK="$1"
-    USER_DIB_APP_IMAGE="$2"
-    USER_DIB_APP_PROJECT="$USER_DIB_APP_IMAGE"
-  fi
 elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
 then
   if [[ "$#" -ge 2 ]]
@@ -188,12 +219,6 @@ then
     USER_DIB_APP_IMAGE="$1"
     USER_DIB_APP_BUILD_SRC="$2"
   fi
-elif [[ "$DIB_RUN_COMMAND" == "help" ]]
-then
-  show_help
-elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
-then
-  check_app_dependencies
 elif [[ "$DIB_RUN_COMMAND" == "run" ]]
 then
   if [[ "$#" -ge 2 ]]
@@ -204,6 +229,7 @@ then
   fi
 fi
 
+load_root_cache_file
 update_core_variables_if_changed
 load_core
 update_other_variables_if_changed
@@ -220,12 +246,6 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
 then
   execute_switch_command
-elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
-then
-  execute_goto_command
-elif [[ "$DIB_RUN_COMMAND" == "version" ]]
-then
-  execute_version_command
 fi
 
 load_paths
@@ -235,37 +255,31 @@ load_more_functions
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]]
 then
-  build_docker_image || abort_build_process
+  execute_build_command
 elif [[ "$DIB_RUN_COMMAND" == "build-push" ]]
 then
-  build_docker_image || abort_build_process
-  push_docker_image
+  execute_build_and_push_command
 elif [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]]
 then
-  build_docker_image || abort_build_process
-  push_docker_image
-  deploy_to_k8s_cluster
+  execute_build_push_and_deploy_command
 elif [[ "$DIB_RUN_COMMAND" == "push" ]]
 then
-  push_docker_image
+  execute_push_command
 elif [[ "$DIB_RUN_COMMAND" == "deploy" ]]
 then
-  deploy_to_k8s_cluster
+  execute_deploy_command
 elif [[ "$DIB_RUN_COMMAND" == "run" ]]
 then
-  run_docker_container
+  execute_run_command
 elif [[ "$DIB_RUN_COMMAND" == "stop" ]]
 then
-  stop_docker_container
+  execute_stop_command
 elif [[ "$DIB_RUN_COMMAND" == "ps" ]]
 then
-  show_docker_container
+  execute_ps_command
 elif [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
-  if generate_kubernetes_manifests
-  then
-    msg "The kubernetes manifests can be found here: $DIB_APP_COMPOSE_K8S_DIR"
-  fi
+  execute_generate_command
 elif [[ "$DIB_RUN_COMMAND" == "edit" ]]
 then
   execute_edit_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
@@ -293,7 +307,7 @@ elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
 then
   msg 'Oops, not implemented yet.'
 else
-  msg "Run command '$DIB_RUN_COMMAND' unknown"
+  msg "Run command '$DIB_RUN_COMMAND' unknown."
   exit 1
 fi
 

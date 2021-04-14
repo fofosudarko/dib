@@ -337,7 +337,7 @@ function check_app_dependencies() {
   else
     msg '
     Oops, docker command not found.
-    Please install and continue since this command helps you to build and push your Docker images
+    Please install and continue since this command helps you to build, run and push your Docker images
     '
   fi
 
@@ -381,8 +381,6 @@ function check_app_dependencies() {
     Oops, nano command not found.
     Please install and continue since this command helps you to edit some files as your default editor.'
   fi
-
-  exit 0
 }
 
 function check_kompose_validity() {
@@ -420,7 +418,7 @@ function check_app_framework_validity() {
 function check_path_validity() {
   local path="$1"
 
-  if [[ -z "$path" ]] || echo -ne "$path"| grep -qE "$DIB_APP_INVALID_PATH_TOKENS"
+  if [[ -z "$path" ]] || echo -ne "$path" | grep -qE "$DIB_APP_INVALID_PATH_TOKENS"
   then
     msg "Invalid path. No path token should match '$DIB_APP_INVALID_PATH_TOKENS'"
     exit 1
@@ -439,7 +437,6 @@ function check_parameter_validity() {
 
 function show_help() {
   msg "This is a help message"
-  exit 0
 }
 
 function source_envvars_from_file() {
@@ -564,6 +561,88 @@ DIB_APP_KUBERNETES_CONTEXT=$APP_KUBERNETES_CONTEXT
 EOF
 }
 
+function create_app_key() {
+  uuidgen | sed -E -e 's/[[:space:]]+//g' -e 's/\-//g' | tr '[:upper:]' '[:lower:]'
+}
+
+function update_database() {
+  local generated_app_key="$1" dib_app_key="$DIB_APP_KEY"
+  local new_project_value="$APP_FRAMEWORK:$APP_PROJECT:$APP_IMAGE"
+  local old_project_value="$(get_project_value_by_app_key "$dib_app_key")"
+  local old_app_key="$(get_app_key_by_project_value "$new_project_value")"
+
+  if [[ -s "$DIB_APP_DATABASE_FILE" ]]
+  then
+    cp "$DIB_APP_DATABASE_FILE" "$DIB_APP_DATABASE_FILE_COPY"
+  fi
+
+  if [[ -z "$old_app_key" && -z "$old_project_value" ]]
+  then
+    echo "$generated_app_key $new_project_value" 1>> "$DIB_APP_DATABASE_FILE"
+    export DIB_APP_KEY="$generated_app_key"
+  elif [[ -n "$old_app_key" && -z "$old_project_value" ]]
+  then
+    remove_entry_by_app_key "$old_app_key"
+    echo "$old_app_key $new_project_value" 1>> "$DIB_APP_DATABASE_FILE"
+    export DIB_APP_KEY="$old_app_key"
+  elif [[ -z "$old_app_key" && -n "$old_project_value" ]]
+  then
+    remove_entry_by_project_value "$old_project_value"
+    echo "$generated_app_key $old_project_value" 1>> "$DIB_APP_DATABASE_FILE"
+    export DIB_APP_KEY="$generated_app_key"
+  elif [[ -n "$old_app_key" && -n "$old_project_value" ]]
+  then
+    export DIB_APP_KEY="$old_app_key"
+  fi
+}
+
+function get_app_key_by_project_value() {
+  local project_value="$1"
+
+  if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$project_value" ]]
+  then
+    grep "$project_value" "$DIB_APP_DATABASE_FILE" | \
+    cut -d' ' -f1 | \
+    grep -E --color=never "$DIB_APP_DATABASE_KEY_PATTERN"
+  fi
+}
+
+function get_project_value_by_app_key() {
+  local app_key="$1"
+
+  if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$app_key" ]]
+  then
+    grep "$app_key" "$DIB_APP_DATABASE_FILE" | \
+    cut -d' ' -f2 | \
+    grep -E --color=never "$DIB_APP_DATABASE_VALUE_PATTERN"
+  fi
+}
+
+function remove_entry_by_app_key() {
+  local app_key="$1"
+
+  if [[ -f "$DIB_APP_DATABASE_FILE" ]]
+  then
+    sed -i '.sed-backup' -e "/${app_key}/d" "$DIB_APP_DATABASE_FILE" 
+    rm -f '*.sed-backup'
+  fi
+}
+
+function remove_entry_by_project_value() {
+  local project_value="$1"
+
+  if [[ -f "$DIB_APP_DATABASE_FILE" ]]
+  then
+    sed -i '.sed-backup' -e "/${project_value}/d" "$DIB_APP_DATABASE_FILE" 
+    rm -f '*.sed-backup'
+  fi
+}
+
+function format_root_cache_file() {
+  export DIB_APP_ROOT_CACHE_FILE="${DIB_APP_ROOT_CACHE_FILE/$ROOT_CACHE_DIR_TEMPLATE/$DIB_APP_KEY}"
+  export DIB_APP_ROOT_CACHE_FILE_COPY="${DIB_APP_ROOT_CACHE_FILE_COPY/$ROOT_CACHE_DIR_TEMPLATE/$DIB_APP_KEY}"
+}
+
 function execute_init_command() {
   
   function create_directories_on_init() {
@@ -584,17 +663,10 @@ function execute_init_command() {
 function execute_goto_command() {
   
   function save_data_to_root_cache_on_goto() {
-  if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
-  then
-    cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
-  fi
-
-  cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
-DIB_APP_FRAMEWORK=$DIB_APP_FRAMEWORK
-DIB_APP_PROJECT=$DIB_APP_PROJECT
-DIB_APP_IMAGE=$DIB_APP_IMAGE
-EOF
+    save_data_to_root_cache
   }
+
+  local app_key="$(create_app_key)"
 
   load_core
   check_parameter_validity "$DIB_HOME" "$DIB_HOME_PLACEHOLDER"
@@ -602,7 +674,10 @@ EOF
   check_parameter_validity "$APP_PROJECT" "$DIB_APP_PROJECT_PLACEHOLDER"
   check_parameter_validity "$APP_IMAGE" "$DIB_APP_IMAGE_PLACEHOLDER"
   check_app_framework_validity
+  update_database "$app_key"
+  format_root_cache_file
   save_data_to_root_cache_on_goto
+  echo "$DIB_APP_KEY"
   exit 0
 }
 
@@ -687,10 +762,41 @@ function execute_copy_command() {
   exit 0
 }
 
-function execute_reset_command() {
+function save_data_to_root_cache() {
+  create_directory_if_not_exist "$(dirname "$DIB_APP_ROOT_CACHE_FILE")"
   
-  function clear_root_cache() {
-    cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+  if [[ -s "$DIB_APP_ROOT_CACHE_FILE" ]]
+  then
+    cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
+  else
+    [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] || touch "$DIB_APP_ROOT_CACHE_FILE"
+  fi
+
+  cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
+DIB_APP_FRAMEWORK=${APP_FRAMEWORK:-}
+DIB_APP_PROJECT=${APP_PROJECT:-}
+DIB_APP_IMAGE=${APP_IMAGE:-}
+DIB_APP_ENVIRONMENT=${APP_ENVIRONMENT:-}
+DIB_APP_CONFIG_DIR=${DIB_APP_CONFIG_DIR:-}
+DIB_APP_COMPOSE_DIR=${DIB_APP_COMPOSE_DIR:-}
+DIB_APP_COMPOSE_K8S_DIR=${DIB_APP_COMPOSE_K8S_DIR:-}
+DIB_APP_K8S_ANNOTATIONS_DIR=${DIB_APP_K8S_ANNOTATIONS_DIR:-}
+DIB_APP_PROJECT_ENV_DIR=${DIB_APP_PROJECT_ENV_DIR:-}
+DIB_APP_SERVICE_ENV_DIR=${DIB_APP_SERVICE_ENV_DIR:-}
+DIB_APP_COMMON_ENV_DIR=${DIB_APP_COMMON_ENV_DIR:-}
+DIB_APP_CACHE_DIR=${DIB_APP_CACHE_DIR:-}
+DIB_APP_KEYSTORES_SRC=${DIB_APP_KEYSTORES_SRC:-}
+DIB_APP_BUILD_SRC=${DIB_APP_BUILD_SRC:-}
+DIB_APP_BUILD_DEST=${DIB_APP_BUILD_DEST:-}
+DIB_CI_JOB=${CI_JOB:-}
+DIB_APP_KEYSTORES_DEST=${DIB_APP_KEYSTORES_DEST:-}
+DIB_APP_PORTS=${DIB_APP_PORTS:-}
+DIB_APP_ENV_FILES=${DIB_APP_ENV_FILES:-}
+EOF
+}
+
+function clear_root_cache() {
+  cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
 DIB_APP_FRAMEWORK=
 DIB_APP_PROJECT=
 DIB_APP_IMAGE=
@@ -709,8 +815,9 @@ DIB_APP_BUILD_DEST=
 DIB_CI_JOB=
 DIB_APP_KEYSTORES_DEST=
 EOF
-  }
-  
+}
+
+function execute_reset_command() {
   clear_root_cache
   exit 0
 }
@@ -773,33 +880,81 @@ function execute_version_command() {
   exit 0
 }
 
-function save_data_to_root_cache() {
-  if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
+function deploy_to_k8s_cluster() {
+  if ! deploy_to_kubernetes_cluster 
   then
-    cp "$DIB_APP_ROOT_CACHE_FILE" "$DIB_APP_ROOT_CACHE_FILE_COPY"
+    msg 'Kubernetes manifests deployed unsuccessfully'
   fi
+}
 
-  cat 1> "$DIB_APP_ROOT_CACHE_FILE" <<EOF
-DIB_APP_FRAMEWORK=$APP_FRAMEWORK
-DIB_APP_PROJECT=$APP_PROJECT
-DIB_APP_IMAGE=$APP_IMAGE
-DIB_APP_ENVIRONMENT=$APP_ENVIRONMENT
-DIB_APP_CONFIG_DIR=$DIB_APP_CONFIG_DIR
-DIB_APP_COMPOSE_DIR=$DIB_APP_COMPOSE_DIR
-DIB_APP_COMPOSE_K8S_DIR=$DIB_APP_COMPOSE_K8S_DIR
-DIB_APP_K8S_ANNOTATIONS_DIR=$DIB_APP_K8S_ANNOTATIONS_DIR
-DIB_APP_PROJECT_ENV_DIR=$DIB_APP_PROJECT_ENV_DIR
-DIB_APP_SERVICE_ENV_DIR=$DIB_APP_SERVICE_ENV_DIR
-DIB_APP_COMMON_ENV_DIR=$DIB_APP_COMMON_ENV_DIR
-DIB_APP_CACHE_DIR=$DIB_APP_CACHE_DIR
-DIB_APP_KEYSTORES_SRC=$DIB_APP_KEYSTORES_SRC
-DIB_APP_BUILD_SRC=$DIB_APP_BUILD_SRC
-DIB_APP_BUILD_DEST=$DIB_APP_BUILD_DEST
-DIB_CI_JOB=$CI_JOB
-DIB_APP_KEYSTORES_DEST=$DIB_APP_KEYSTORES_DEST
-DIB_APP_PORTS=$DIB_APP_PORTS
-DIB_APP_ENV_FILES=$DIB_APP_ENV_FILES
-EOF
+function execute_build_command() {
+  build_docker_image || abort_build_process
+}
+
+function execute_build_and_push_command() {
+  build_docker_image || abort_build_process
+  push_docker_image
+}
+
+function execute_build_push_and_deploy_command() {
+  build_docker_image || abort_build_process
+  push_docker_image
+  deploy_to_k8s_cluster
+}
+
+function execute_push_command() {
+  push_docker_image
+}
+
+function execute_deploy_command() {
+  deploy_to_k8s_cluster
+}
+
+function execute_run_command() {
+  run_docker_container
+}
+
+function execute_stop_command() {
+  stop_docker_container
+}
+
+function execute_ps_command() {
+  ps_docker_container
+}
+
+function execute_generate_command() {
+  if generate_kubernetes_manifests
+  then
+    msg "The kubernetes manifests can be found here: $DIB_APP_COMPOSE_K8S_DIR"
+  fi
+}
+
+function execute_doctor_command() {
+  check_app_dependencies
+  exit 0
+}
+
+function execute_help_command() {
+  local command="${1:-all}"
+
+  case "$command"
+  in
+    all)
+      show_help
+    ;;
+  esac
+  
+  exit 0
+}
+
+function execute_get_key_command() {
+  get_app_key_by_project_value "$1"
+  exit 0
+}
+
+function execute_get_project_command() {
+  get_project_value_by_app_key "$1"
+  exit 0
 }
 
 ## -- finish
