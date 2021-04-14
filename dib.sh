@@ -91,6 +91,8 @@ USER_DIB_APP_FRAMEWORK=
 USER_DIB_APP_ENVIRONMENT=
 USER_DIB_APP_IMAGE=
 USER_DIB_APP_IMAGE_TAG=
+USER_DIB_APP_PORTS=
+USER_DIB_APP_ENV_FILES=
 DIB_APP_BUILD_SRC=
 DIB_APP_BUILD_DEST=
 DIB_APP_PROJECT=
@@ -98,16 +100,20 @@ DIB_APP_FRAMEWORK=
 DIB_APP_ENVIRONMENT=
 DIB_APP_IMAGE=
 DIB_APP_IMAGE_TAG=
+DIB_APP_PORTS=
+DIB_APP_ENV_FILES=
 DIB_FILE_TYPE=
 DIB_FILE_RESOURCE=
 DIB_ENV_TYPE=
+DIB_DOCKER_COMPOSE_FILE_CHANGED=0
+DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=0
+DIB_APP_ENV_FILE_CHANGED=0
+DIB_APP_COMMON_ENV_FILE_CHANGED=0
+DIB_APP_PROJECT_ENV_FILE_CHANGED=0
+DIB_APP_SERVICE_ENV_FILE_CHANGED=0
+DIB_APP_CONTAINERS_RESTART=0
+
 KUBECONFIG=
-DOCKER_COMPOSE_FILE_CHANGED=0
-K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=0
-APP_ENV_FILE_CHANGED=0
-APP_COMMON_ENV_FILE_CHANGED=0
-APP_PROJECT_ENV_FILE_CHANGED=0
-APP_SERVICE_ENV_FILE_CHANGED=0
 
 load_init
 load_root_cache_file
@@ -188,11 +194,19 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
 then
   check_app_dependencies
+elif [[ "$DIB_RUN_COMMAND" == "run" ]]
+then
+  if [[ "$#" -ge 2 ]]
+  then
+    USER_DIB_APP_IMAGE="$1"
+    USER_DIB_APP_PORTS="$2"
+    USER_DIB_APP_ENV_FILES="$3"
+  fi
 fi
 
-substitute_core_variables_if_changed
+update_core_variables_if_changed
 load_core
-substitute_other_variables_if_changed
+update_other_variables_if_changed
 
 if [[ "$DIB_RUN_COMMAND" == "copy" ]]
 then
@@ -209,6 +223,9 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
 then
   execute_goto_command
+elif [[ "$DIB_RUN_COMMAND" == "version" ]]
+then
+  execute_version_command
 fi
 
 load_paths
@@ -234,6 +251,15 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "deploy" ]]
 then
   deploy_to_k8s_cluster
+elif [[ "$DIB_RUN_COMMAND" == "run" ]]
+then
+  run_docker_container
+elif [[ "$DIB_RUN_COMMAND" == "stop" ]]
+then
+  stop_docker_container
+elif [[ "$DIB_RUN_COMMAND" == "ps" ]]
+then
+  show_docker_container
 elif [[ "$DIB_RUN_COMMAND" == "generate" ]]
 then
   if generate_kubernetes_manifests

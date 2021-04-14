@@ -104,26 +104,6 @@ function execute_file_command() {
             ;;
           esac
         ;;
-        common-env)
-          case "$command"
-          in
-            edit)
-              edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
-            ;;
-            show)
-              show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
-            ;;
-            path)
-              locate_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
-            ;;
-            erase)
-              erase_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
-            ;;
-            restore)
-              restore_file "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY" "$DIB_APP_COMMON_ENV_CHANGED_FILE"
-            ;;
-          esac
-        ;;
         service-env)
           case "$command"
           in
@@ -141,6 +121,26 @@ function execute_file_command() {
             ;;
             restore)
               restore_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY" "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
+            ;;
+          esac
+        ;;
+        common-env)
+          case "$command"
+          in
+            edit)
+              edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
+            ;;
+            show)
+              show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+            ;;
+            path)
+              locate_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+            ;;
+            erase)
+              erase_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY" "$DIB_APP_COMMON_ENV_CHANGED_FILE"
             ;;
           esac
         ;;
@@ -193,19 +193,19 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY"
+              edit_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE_COPY"
             ;;
             show)
-              show_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              show_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             path)
-              locate_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              locate_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             erase)
-              erase_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              erase_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             restore)
-              restore_file "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE"
+              restore_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
           esac
         ;;
@@ -238,19 +238,19 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE" "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY"
+              edit_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE_COPY"
             ;;
             show)
-              show_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              show_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             path)
-              locate_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              locate_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             erase)
-              erase_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              erase_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             restore)
-              restore_file "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+              restore_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
           esac
         ;;
@@ -259,25 +259,25 @@ function execute_file_command() {
     k8s-annotations)
       if [[ -n "$file_resource" ]]
       then
-        k8s_annotations_file="${DIB_APP_K8S_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
-        k8s_annotations_file_copy="${DIB_APP_K8S_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_ANNOTATION_TEMPLATE/$file_resource}"
+        k8s_resource_annotations_file="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_TEMPLATE/$file_resource}"
+        k8s_resource_annotations_file_copy="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_TEMPLATE/$file_resource}"
 
         case "$command"
           in
             edit)
-              edit_file "$k8s_annotations_file" "$k8s_annotations_file_copy"
+              edit_file "$k8s_resource_annotations_file" "$k8s_resource_annotations_file_copy"
             ;;
             show)
-              show_file "$k8s_annotations_file"
+              show_file "$k8s_resource_annotations_file"
             ;;
             path)
-              locate_file "$k8s_annotations_file"
+              locate_file "$k8s_resource_annotations_file"
             ;;
             erase)
-              erase_file "$k8s_annotations_file"
+              erase_file "$k8s_resource_annotations_file"
             ;;
             restore)
-              restore_file "$k8s_annotations_file_copy" "$k8s_annotations_file"
+              restore_file "$k8s_resource_annotations_file_copy" "$k8s_resource_annotations_file"
             ;;
         esac
       fi

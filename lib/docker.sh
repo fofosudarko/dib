@@ -121,12 +121,12 @@ function build_docker_image() {
       build_springboot_docker_image
     ;;
     angular)
-      ensure_paths_exist "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
+      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
       copy_docker_build_files "$DIB_APP_DOCKER_COMPOSE_BUILD_FILES" "$DIB_APP_BUILD_DEST"
       build_angular_docker_image
     ;;
     react)
-      ensure_paths_exist "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
+      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
       copy_docker_build_files "$DIB_APP_DOCKER_COMPOSE_BUILD_FILES" "$DIB_APP_BUILD_DEST"
       build_react_docker_image
     ;;
@@ -135,12 +135,12 @@ function build_docker_image() {
       build_flask_docker_image
     ;;
     nuxt)
-      ensure_paths_exist "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
+      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
       copy_docker_build_files "$DIB_APP_DOCKER_COMPOSE_BUILD_FILES" "$DIB_APP_BUILD_DEST"
       build_nuxt_docker_image
     ;;
     next)
-      ensure_paths_exist "$DIB_APP_CONFIG_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
+      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
       copy_docker_build_files "$DIB_APP_DOCKER_COMPOSE_BUILD_FILES" "$DIB_APP_BUILD_DEST"
       build_next_docker_image
     ;;
@@ -174,6 +174,121 @@ function push_docker_image() {
   $DOCKER_CMD tag "$target_image" "$remote_target_image"
   $DOCKER_CMD push "$remote_target_image"
   $DOCKER_CMD logout 2> /dev/null
+}
+
+function is_docker_container_running() {
+  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=running" -q)
+  
+  [[ -n "$result" ]] && return 0 || return 1
+}
+
+function is_docker_container_dead() {
+  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=dead" -q)
+  
+  [[ -n "$result" ]] && return 0 || return 1
+}
+
+function is_docker_container_exited() {
+  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=exited" -q)
+  
+  [[ -n "$result" ]] && return 0 || return 1
+}
+
+function is_docker_container_paused() {
+  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=paused" -q)
+  
+  [[ -n "$result" ]] && return 0 || return 1
+}
+
+function columnize_items() {
+  echo -ne "$1" | sed -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
+}
+
+function run_docker_container() {
+
+  function get_app_ports() {
+    if [[ -n "$DIB_APP_PORTS" ]]
+    then
+      while read -r port
+      do
+        ports="-p $port:$port $ports"
+      done < <(columnize_items "$DIB_APP_PORTS")
+    fi
+  }
+
+  function get_app_env_files() {
+    if [[ -n "$DIB_APP_ENV_FILES" ]]
+    then
+      while read -r env_file
+      do
+        case "$env_file"
+        in
+          app-env)
+            [[ -s "$DIB_APP_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_ENV_CHANGED_FILE $env_files"
+          ;;
+          service-env)
+            [[ -s "$DIB_APP_SERVICE_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_SERVICE_ENV_CHANGED_FILE $env_files"
+          ;;
+          common-env)
+            [[ -s "$DIB_APP_COMMON_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_COMMON_ENV_CHANGED_FILE $env_files"
+          ;;
+          project-env)
+            [[ -s "$DIB_APP_PROJECT_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_PROJECT_ENV_CHANGED_FILE $env_files"
+          ;;
+        esac
+      done < <(columnize_items "$DIB_APP_ENV_FILES")
+    fi
+  }
+
+  function save_data_to_root_cache_on_run() {
+    save_data_to_root_cache
+  }
+
+  local ports= env_files= target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+
+  msg 'Running docker container ...'
+
+  get_app_ports
+  get_app_env_files
+
+  if is_docker_container_running
+  then
+    if [[ "$DIB_APP_CONTAINERS_RESTART" == "1" ]]
+    then
+      $DOCKER_CMD container stop $APP_IMAGE
+      $DOCKER_CMD container rm -f $APP_IMAGE
+      $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+    else
+      $DOCKER_CMD container restart $APP_IMAGE
+    fi
+  elif is_docker_container_dead || is_docker_container_exited || is_docker_container_paused
+  then
+    $DOCKER_CMD container rm -f $APP_IMAGE
+    $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+  else
+    $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+  fi
+
+  save_data_to_root_cache_on_run
+}
+
+function stop_docker_container() {
+  msg 'Stopping docker container ...'
+
+  if is_docker_container_running
+  then
+    $DOCKER_CMD container stop $APP_IMAGE
+    $DOCKER_CMD container rm -f $APP_IMAGE
+  elif is_docker_container_dead || is_docker_container_exited || is_docker_container_paused
+  then
+    $DOCKER_CMD container rm -f $APP_IMAGE
+  fi
+}
+
+function show_docker_container() {
+  msg 'Showing docker container ...'
+
+  $DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --all
 }
 
 ## -- finish

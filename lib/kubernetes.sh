@@ -134,24 +134,24 @@ EOF
 
   local original_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.original.yml
   local changed_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.changed.yml
-  local template_compose_file="$DIB_APP_COMPOSE_COMPOSE_TEMPLATE_FILE"
+  local template_compose_file="$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
 
   ensure_paths_exist "$template_compose_file"
   format_docker_compose_template "$template_compose_file" "$changed_compose_file"
 
-  docker_compose_file_changed && DOCKER_COMPOSE_FILE_CHANGED=1
-  kubernetes_resources_annotations_changed && K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
-  app_env_file_changed && APP_ENV_FILE_CHANGED=1
-  app_service_env_file_changed && APP_SERVICE_ENV_FILE_CHANGED=1
-  app_common_env_file_changed && APP_COMMON_ENV_FILE_CHANGED=1
-  app_project_env_file_changed && APP_PROJECT_ENV_FILE_CHANGED=1
+  docker_compose_file_changed && DIB_DOCKER_COMPOSE_FILE_CHANGED=1
+  kubernetes_resources_annotations_changed && DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
+  app_env_file_changed && DIB_APP_ENV_FILE_CHANGED=1
+  app_service_env_file_changed && DIB_APP_SERVICE_ENV_FILE_CHANGED=1
+  app_common_env_file_changed && DIB_APP_COMMON_ENV_FILE_CHANGED=1
+  app_project_env_file_changed && DIB_APP_PROJECT_ENV_FILE_CHANGED=1
 
-  if [[ "$DOCKER_COMPOSE_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
-    [[ "$APP_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$APP_COMMON_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$APP_PROJECT_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$APP_SERVICE_ENV_FILE_CHANGED" -eq 0 ]]
+  if [[ "$DIB_DOCKER_COMPOSE_FILE_CHANGED" -eq 0 ]] && \
+    [[ "$DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
+    [[ "$DIB_APP_ENV_FILE_CHANGED" -eq 0 ]] && \
+    [[ "$DIB_APP_COMMON_ENV_FILE_CHANGED" -eq 0 ]] && \
+    [[ "$DIB_APP_PROJECT_ENV_FILE_CHANGED" -eq 0 ]] && \
+    [[ "$DIB_APP_SERVICE_ENV_FILE_CHANGED" -eq 0 ]]
   then
     return 1
   fi
@@ -213,12 +213,12 @@ function deploy_to_kubernetes_cluster() {
 
     if $(kubernetes_deployments_exist) && \
       ! $(kubernetes_deployments_scaled_to_zero) && \
-      [[ "$DOCKER_COMPOSE_FILE_CHANGED" == "0" ]] && \
-      [[ "$K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" == "0" ]] && \
-      [[ "$APP_ENV_FILE_CHANGED" == "0" ]] && \
-      [[ "$APP_COMMON_ENV_FILE_CHANGED" == "0" ]] && \
-      [[ "$APP_SERVICE_ENV_FILE_CHANGED" == "0" ]] && \
-      [[ "$APP_PROJECT_ENV_FILE_CHANGED" == "0" ]]
+      [[ "$DIB_DOCKER_COMPOSE_FILE_CHANGED" == "0" ]] && \
+      [[ "$DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" == "0" ]] && \
+      [[ "$DIB_APP_ENV_FILE_CHANGED" == "0" ]] && \
+      [[ "$DIB_APP_COMMON_ENV_FILE_CHANGED" == "0" ]] && \
+      [[ "$DIB_APP_SERVICE_ENV_FILE_CHANGED" == "0" ]] && \
+      [[ "$DIB_APP_PROJECT_ENV_FILE_CHANGED" == "0" ]]
     then
       msg "Patching kubernetes deployments ..."
       eval "$(patch_kubernetes_deployment)"
