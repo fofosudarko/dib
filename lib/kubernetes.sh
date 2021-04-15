@@ -122,7 +122,7 @@ EOF
     
     sed -i'.sed-backup' -E "s/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g" *configmap* 2> /dev/null
 
-    rm -f *sed-backup 2> /dev/null
+    rm -f *.sed-backup 2> /dev/null
   }
   
   function docker_compose_file_changed() {

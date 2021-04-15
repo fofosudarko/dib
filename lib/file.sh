@@ -44,31 +44,26 @@ function erase_file() {
 
 function execute_edit_command() {
   local file_type="$1" file_resource="$2"
-
   execute_file_command "edit" "$file_type" "$file_resource"
 }
 
 function execute_show_command() {
   local file_type="$1" file_resource="$2"
-
   execute_file_command "show" "$file_type" "$file_resource"
 }
 
 function execute_path_command() {
   local file_type="$1" file_resource="$2"
-
   execute_file_command "path" "$file_type" "$file_resource"
 }
 
 function execute_erase_command() {
   local file_type="$1" file_resource="$2"
-
   execute_file_command "erase" "$file_type" "$file_resource"
 }
 
 function execute_restore_command() {
   local file_type="$1" file_resource="$2"
-
   execute_file_command "restore" "$file_type" "$file_resource"
 }
 
