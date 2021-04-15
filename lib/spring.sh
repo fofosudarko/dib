@@ -1,18 +1,18 @@
 #!/bin/bash
 #
-# File: springboot.sh -> common springboot operations
+# File: spring.sh -> common spring operations
 #
 # (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
 #
-# Usage: source springboot.sh
+# Usage: source spring.sh
 #
 #
 
 ## - start here
 
-function add_springboot_application_properties() {
-  [[ -d $SPRINGBOOT_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
-  cp $SPRINGBOOT_APPLICATION_PROPERTIES $SPRINGBOOT_APPLICATION_PROPERTIES_DIR
+function add_spring_application_properties() {
+  [[ -d $SPRING_APPLICATION_PROPERTIES_DIR ]] || mkdir -p $SPRING_APPLICATION_PROPERTIES_DIR
+  cp $SPRING_APPLICATION_PROPERTIES $SPRING_APPLICATION_PROPERTIES_DIR
 }
 
 function add_maven_wrapper_properties() {
@@ -24,7 +24,7 @@ function add_maven_wrapper_properties() {
   fi
 }
 
-function add_springboot_keystores() {
+function add_spring_keystores() {
   local docker_file="$1" keystores_src="$2" keystores_dest="$3"
 
   if grep -qE 'keystores' "$docker_file" 2> /dev/null

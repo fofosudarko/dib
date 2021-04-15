@@ -24,25 +24,21 @@ function edit_file() {
 
 function restore_file() {
   local file_copy="$1" file="$2" 
-
   [[ -s "$file_copy" ]] && cp "$file_copy" "$file"
 }
 
 function show_file() {
   local file="$1"
-
   exec $PAGER_CMD "$file"
 }
 
 function locate_file() {
   local file="$1"
-
   exec ls "$file"
 }
 
 function erase_file() {
   local file="$1"
-
   exec cp /dev/null "$file"
 }
 
@@ -282,26 +278,26 @@ function execute_file_command() {
         esac
       fi
     ;;
-    springboot)
+    spring)
       case "$file_resource"
       in
         application-properties)
           case "$command"
           in
             edit)
-              edit_file "$SPRINGBOOT_APPLICATION_PROPERTIES" "$SPRINGBOOT_APPLICATION_PROPERTIES_COPY"
+              edit_file "$SPRING_APPLICATION_PROPERTIES" "$SPRING_APPLICATION_PROPERTIES_COPY"
             ;;
             show)
-              show_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
+              show_file "$SPRING_APPLICATION_PROPERTIES"
             ;;
             path)
-              locate_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
+              locate_file "$SPRING_APPLICATION_PROPERTIES"
             ;;
             erase)
-              erase_file "$SPRINGBOOT_APPLICATION_PROPERTIES"
+              erase_file "$SPRING_APPLICATION_PROPERTIES"
             ;;
             restore)
-              restore_file "$SPRINGBOOT_APPLICATION_PROPERTIES_COPY" "$SPRINGBOOT_APPLICATION_PROPERTIES"
+              restore_file "$SPRING_APPLICATION_PROPERTIES_COPY" "$SPRING_APPLICATION_PROPERTIES"
             ;;
           esac
         ;;

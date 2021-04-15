@@ -12,7 +12,7 @@ copy_exclusions = $(source_folder)/exclude-files.txt
 build_version = v1.0.0-rc2
 build_location = $(source_folder)/build
 build = $(build_location)/$(app_name)-$(build_version).zip
-build_exclusions = -x '*.git*' -x '*build/*'
+build_exclusions = -x '*.git*' -x '*build/*' -x '*.DS_Store*'
 
 dib: check_requirements install link
 

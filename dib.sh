@@ -41,7 +41,7 @@ function load_template() {
 
 function load_more_functions() {
   source "$LIB_DIR/file.sh"
-  source "$LIB_DIR/springboot.sh"
+  source "$LIB_DIR/spring.sh"
   source "$LIB_DIR/docker.sh"
   source "$LIB_DIR/kubernetes.sh"
 }

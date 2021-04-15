@@ -67,7 +67,7 @@ function copy_docker_build_files() {
   
   msg 'Copying docker build files ...'
 
-  ensure_paths_exist "$build_files $docker_project"
+  ensure_paths_exist "$docker_project"
 
   format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
   
