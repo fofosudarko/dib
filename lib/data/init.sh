@@ -16,7 +16,7 @@
 
 : ${DIB_RUN_COMMANDS='^(build|build\-push|build\-push\-deploy|push|deploy|doctor)$'}
 : ${DIB_APP_ENVIRONMENTS='^(dev|develop|development|staging|beta|prod|production|demo|alpha)$'}
-: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next)$'}
+: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next|rails|django)$'}
 : ${DIB_APP_INVALID_PATH_TOKENS='example\-(project|framework|environment|service)'}
 : ${DIB_APP_CONFIG_EXCLUDE_PATTERNS='*Dockerfile*\n*docker-compose*\n*application*properties\n'}
 : ${DIB_APP_DATABASE_KEY_PATTERN='^[[:alnum:]]+$'}

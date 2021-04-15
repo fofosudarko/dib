@@ -119,7 +119,10 @@ KUBECONFIG=
 
 load_init
 
-if [[ "$DIB_RUN_COMMAND" == "goto" ]]
+if [[ "$DIB_RUN_COMMAND" == "init" ]]
+then
+  execute_init_command
+elif [[ "$DIB_RUN_COMMAND" == "goto" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
@@ -160,6 +163,9 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "version" ]]
 then
   execute_version_command
+elif [[ "$DIB_RUN_COMMAND" == "get-all" ]]
+then
+  execute_get_all_command
 fi
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
@@ -202,9 +208,6 @@ then
     DIB_FILE_RESOURCE="$3"
     USER_DIB_APP_IMAGE_TAG="$4"
   fi
-elif [[ "$DIB_RUN_COMMAND" == "init" ]]
-then
-  execute_init_command
 elif [[ "$DIB_RUN_COMMAND" == "switch" ]]
 then
   if [[ "$#" -ge 2 ]]

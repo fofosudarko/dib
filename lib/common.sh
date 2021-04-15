@@ -12,7 +12,6 @@
 
 function msg() {
   local message="$1"
-  
   echo >&2 "$message"
 }
 
@@ -68,10 +67,8 @@ function copy_docker_build_files() {
   msg 'Copying docker build files ...'
 
   ensure_paths_exist "$docker_project"
-
   format_docker_compose_template "$docker_compose_template" "$docker_compose_out"
-  
-  rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project
+  rsync -av --exclude='$(basename $docker_compose_template)' $build_files $docker_project 2> /dev/null
 }
 
 function copy_config_files() {
@@ -81,7 +78,6 @@ function copy_config_files() {
   msg 'Copying configuration files ...'
 
   ensure_paths_exist "$config_dir $app_build_dest"
-  
   rsync -av $exclude_patterns $config_dir/ $app_build_dest
 }
 
@@ -153,7 +149,6 @@ function abort_build_process() {
 
 function create_directory_if_not_exist() {
   local directory="$1"
-
   [[ -d "$directory" ]] || mkdir -p "$directory"
 }
 
@@ -217,24 +212,6 @@ function is_kompose_version_valid() {
     fi
   fi
   
-  return 0
-}
-
-function set_app_frontend_build_mode() {
-  case "$APP_BUILD_MODE"
-  in
-    spa)
-      cp $DIB_APP_BUILD_DEST/Dockerfile-spa $DOCKER_FILE
-    ;;
-    universal)
-      cp $DIB_APP_BUILD_DEST/Dockerfile-universal $DOCKER_FILE
-    ;;
-    *)
-      msg "app build mode '$APP_BUILD_MODE' unknown"
-      return 1
-    ;;
-  esac
-
   return 0
 }
 
@@ -638,6 +615,10 @@ function remove_entry_by_project_value() {
   fi
 }
 
+function get_all_database_entries() {
+  [[ -f "$DIB_APP_DATABASE_FILE" ]] && exec cat "$DIB_APP_DATABASE_FILE"
+}
+
 function format_root_cache_file() {
   export DIB_APP_ROOT_CACHE_FILE="${DIB_APP_ROOT_CACHE_FILE/$ROOT_CACHE_DIR_TEMPLATE/$DIB_APP_KEY}"
   export DIB_APP_ROOT_CACHE_FILE_COPY="${DIB_APP_ROOT_CACHE_FILE_COPY/$ROOT_CACHE_DIR_TEMPLATE/$DIB_APP_KEY}"
@@ -683,27 +664,8 @@ function execute_goto_command() {
 
 function execute_switch_command() {
   
-  function create_directories_on_switch() {
-    local directories=
-
-    DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_COMPOSE_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_COMPOSE_K8S_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT/kubernetes"
-    DIB_APP_K8S_ANNOTATIONS_DIR="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_PROJECT_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"
-    DIB_APP_SERVICE_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"
-    DIB_APP_COMMON_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"
-    DIB_APP_CACHE_DIR="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_KEYSTORES_SRC="$DIB_APPS_KEYSTORES_DIR/$APP_PROJECT/$APP_ENVIRONMENT/keystores"
-    DIB_APP_BUILD_DEST="$DIB_APPS_DIR/$APP_FRAMEWORK/$APP_IMAGE/$APP_ENVIRONMENT/$CI_JOB"
-    DIB_APP_KEYSTORES_DEST="$DIB_APP_BUILD_DEST"
-
-    directories="$DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR $DIB_APP_COMPOSE_K8S_DIR"
-    directories="$directories $DIB_APP_K8S_ANNOTATIONS_DIR $DIB_APP_PROJECT_ENV_DIR"
-    directories="$directories $DIB_APP_SERVICE_ENV_DIR $DIB_APP_COMMON_ENV_DIR $DIB_APP_CACHE_DIR"
-    directories="$directories $DIB_APP_BUILD_DEST $DIB_APP_KEYSTORES_SRC"
-  
-    create_directories_if_not_exist "$directories"
+  function set_directories_on_switch() {
+    set_project_directories
   }
 
   function save_data_to_root_cache_on_switch() {
@@ -717,7 +679,7 @@ function execute_switch_command() {
   check_parameter_validity "$APP_ENVIRONMENT" "$DIB_APP_ENVIRONMENT_PLACEHOLDER"
   check_app_framework_validity
   check_app_environment_validity
-  create_directories_on_switch
+  set_directories_on_switch
   save_data_to_root_cache_on_switch
   exit 0
 }
@@ -729,26 +691,8 @@ function execute_cache_command() {
 
 function execute_copy_command() {
   
-  function create_directories_on_copy() {
-    local directories=
-
-    DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_COMPOSE_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_COMPOSE_K8S_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT/kubernetes"
-    DIB_APP_K8S_ANNOTATIONS_DIR="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_PROJECT_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"
-    DIB_APP_SERVICE_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"
-    DIB_APP_COMMON_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"
-    DIB_APP_CACHE_DIR="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
-    DIB_APP_KEYSTORES_SRC="$DIB_APPS_KEYSTORES_DIR/$APP_PROJECT/$APP_ENVIRONMENT/keystores"
-    DIB_APP_BUILD_DEST="$DIB_APPS_DIR/$APP_FRAMEWORK/$APP_IMAGE/$APP_ENVIRONMENT/$CI_JOB"
-    DIB_APP_KEYSTORES_DEST="$DIB_APP_BUILD_DEST"
-
-    directories="$DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR $DIB_APP_COMPOSE_K8S_DIR $DIB_APP_K8S_ANNOTATIONS_DIR"
-    directories="$directories $DIB_APP_PROJECT_ENV_DIR $DIB_APP_SERVICE_ENV_DIR $DIB_APP_COMMON_ENV_DIR"
-    directories="$directories $DIB_APP_CACHE_DIR $DIB_APP_KEYSTORES_SRC $DIB_APP_BUILD_DEST"
-
-    create_directories_if_not_exist "$directories"
+  function set_directories_on_copy() {
+    set_project_directories
   }
 
   function save_data_to_root_cache_on_copy() {
@@ -756,10 +700,33 @@ function execute_copy_command() {
   }
 
   load_core
-  create_directories_on_copy
+  set_directories_on_copy
   copy_docker_project "$DIB_APP_BUILD_SRC" "$DIB_APP_BUILD_DEST"
   save_data_to_root_cache_on_copy
   exit 0
+}
+
+function set_project_directories() {
+  local directories=
+
+  DIB_APP_CONFIG_DIR="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+  DIB_APP_COMPOSE_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+  DIB_APP_COMPOSE_K8S_DIR="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT/kubernetes"
+  DIB_APP_K8S_ANNOTATIONS_DIR="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+  DIB_APP_PROJECT_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT"
+  DIB_APP_SERVICE_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE"
+  DIB_APP_COMMON_ENV_DIR="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_ENVIRONMENT"
+  DIB_APP_CACHE_DIR="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$APP_ENVIRONMENT"
+  DIB_APP_KEYSTORES_SRC="$DIB_APPS_KEYSTORES_DIR/$APP_PROJECT/$APP_ENVIRONMENT/keystores"
+  DIB_APP_BUILD_DEST="$DIB_APPS_DIR/$APP_FRAMEWORK/$APP_IMAGE/$APP_ENVIRONMENT/$CI_JOB"
+  DIB_APP_KEYSTORES_DEST="$DIB_APP_BUILD_DEST"
+
+  directories="$DIB_APP_CONFIG_DIR $DIB_APP_COMPOSE_DIR $DIB_APP_COMPOSE_K8S_DIR"
+  directories="$directories $DIB_APP_K8S_ANNOTATIONS_DIR $DIB_APP_PROJECT_ENV_DIR"
+  directories="$directories $DIB_APP_SERVICE_ENV_DIR $DIB_APP_COMMON_ENV_DIR $DIB_APP_CACHE_DIR"
+  directories="$directories $DIB_APP_BUILD_DEST $DIB_APP_KEYSTORES_SRC"
+
+  create_directories_if_not_exist "$directories"
 }
 
 function save_data_to_root_cache() {
@@ -954,6 +921,11 @@ function execute_get_key_command() {
 
 function execute_get_project_command() {
   get_project_value_by_app_key "$1"
+  exit 0
+}
+
+function execute_get_all_command() {
+  get_all_database_entries
   exit 0
 }
 

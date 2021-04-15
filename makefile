@@ -1,7 +1,7 @@
 # makefile
 
 .PHONY : dib check_requirements check_docker check_docker_compose \
-				 check_kompose check_kubectl check_bash install link uninstall build
+        check_kompose check_kubectl check_bash install link uninstall build
 
 source_folder = .
 app_name = dib

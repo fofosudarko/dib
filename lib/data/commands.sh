@@ -12,12 +12,12 @@
 
 # system commands
 
-: ${DOCKER_CMD="$(which docker)"}
-: ${DOCKER_COMPOSE_CMD="$(which docker-compose)"}
-: ${KOMPOSE_CMD="$(which kompose)"}
-: ${KUBECTL_CMD="$(which kubectl)"}
-: ${NANO_CMD="$(which nano)"}
-: ${SHELL_CMD="$(which bash)"}
-: ${LESS_CMD="$(which less)"}
+: ${DOCKER_CMD="$(which docker 2> /dev/null)"}
+: ${DOCKER_COMPOSE_CMD="$(which docker-compose 2> /dev/null)"}
+: ${KOMPOSE_CMD="$(which kompose 2> /dev/null)"}
+: ${KUBECTL_CMD="$(which kubectl 2> /dev/null)"}
+: ${NANO_CMD="$(which nano 2> /dev/null)"}
+: ${SHELL_CMD="$(which bash 2> /dev/null)"}
+: ${LESS_CMD="$(which less 2> /dev/null)"}
 
 ## -- finish

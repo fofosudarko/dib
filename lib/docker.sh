@@ -56,91 +56,51 @@ function build_docker_image_from_file() {
   return "$?"
 }
 
-function build_spring_docker_image() {
-  msg 'Building spring docker image ...'
-
-  add_spring_application_properties
-  add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
-  add_spring_keystores "$DOCKER_FILE" "$DIB_APP_KEYSTORES_SRC" "$DIB_APP_KEYSTORES_DEST"
-  select_docker_build_process
-}
-
-function build_angular_docker_image() {
-  msg 'Building angular docker image ...'
-  select_docker_build_process
-}
-
-function build_react_docker_image() {
-  msg 'Building react docker image ...'
-  select_docker_build_process
-}
-
-function build_flask_docker_image() {
-  msg 'Building flask docker image ...'
-  select_docker_build_process
-}
-
-function build_nuxt_docker_image() {
-  msg 'Building nuxt docker image ...'
-  select_docker_build_process
-}
-
-function build_next_docker_image() {
-  msg 'Building next docker image ...'
-  select_docker_build_process
-}
-
-function build_feathers_docker_image() {
-  msg 'Building feathers docker image ...'
-  select_docker_build_process
-}
-
-function build_express_docker_image() {
-  msg 'Building express docker image ...'
-  select_docker_build_process
-}
-
-function build_mux_docker_image() {
-  msg 'Building mux docker image ...'
-  select_docker_build_process
-}
-
 function build_docker_image() {
   copy_config_files "$DIB_APP_CONFIG_DIR" "$DIB_APP_BUILD_DEST"
   copy_docker_build_files "$DIB_APP_DOCKER_BUILD_FILES" "$DIB_APP_BUILD_DEST"
   
   case "$APP_FRAMEWORK" in
     spring)
+      msg 'Building spring docker image ...'
+      
       ensure_paths_exist "$SPRING_APPLICATION_PROPERTIES $MAVEN_WRAPPER_PROPERTIES_SRC"
-      build_spring_docker_image
+      add_spring_application_properties
+      add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
+      add_spring_keystores "$DOCKER_FILE" "$DIB_APP_KEYSTORES_SRC" "$DIB_APP_KEYSTORES_DEST"
+      select_docker_build_process
     ;;
     angular)
-      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
-      build_angular_docker_image
+      msg 'Building angular docker image ...'
+      select_docker_build_process
     ;;
     react)
-      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
-      build_react_docker_image
+      msg 'Building react docker image ...'
+      select_docker_build_process
     ;;
     flask)
-      build_flask_docker_image
+      msg 'Building flask docker image ...'
+      select_docker_build_process
     ;;
     nuxt)
-      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
-      build_nuxt_docker_image
+      msg 'Building nuxt docker image ...'
+      select_docker_build_process
     ;;
     next)
-      ensure_paths_exist "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE $DIB_APP_CONFIG_RUN_SCRIPT"
-      build_next_docker_image
+      msg 'Building next docker image ...'
+      select_docker_build_process
     ;;
     feathers)
-      build_feathers_docker_image
+      msg 'Building feathers docker image ...'
+      select_docker_build_process
     ;;
     express)
-      build_express_docker_image
+      msg 'Building express docker image ...'
+      select_docker_build_process
     ;;
     mux)
-      build_mux_docker_image
+      msg 'Building mux docker image ...'
+      select_docker_build_process
     ;;
     *)
       msg "$APP_FRAMEWORK unknown"
@@ -164,25 +124,21 @@ function push_docker_image() {
 
 function is_docker_container_running() {
   local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=running" -q)
-  
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_dead() {
   local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=dead" -q)
-  
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_exited() {
   local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=exited" -q)
-  
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_paused() {
   local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=paused" -q)
-  
   [[ -n "$result" ]] && return 0 || return 1
 }
 
@@ -273,7 +229,6 @@ function stop_docker_container() {
 
 function ps_docker_container() {
   msg 'Showing docker container ...'
-
   $DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --all
 }
 
