@@ -224,11 +224,15 @@ then
   fi
 elif [[ "$DIB_RUN_COMMAND" == "run" ]]
 then
-  if [[ "$#" -ge 2 ]]
+  if [[ "$#" -ge 3 ]]
   then
     USER_DIB_APP_IMAGE="$1"
     USER_DIB_APP_PORTS="$2"
     USER_DIB_APP_ENV_FILES="$3"
+  elif [[ "$#" -ge 2 ]]
+  then
+    USER_DIB_APP_IMAGE="$1"
+    USER_DIB_APP_PORTS="$2"
   fi
 fi
 
