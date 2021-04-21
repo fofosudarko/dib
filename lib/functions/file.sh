@@ -2,8 +2,6 @@
 #
 # File: file.sh -> common file operations
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source file.sh
 #
 #
@@ -19,7 +17,9 @@ function edit_file() {
 
   [[ -s "$file" ]] && cp "$file" "$file_copy"
 
-  exec $EDITOR_CMD "$file"
+  $EDITOR_CMD "$file"
+
+  return "$?"
 }
 
 function restore_file() {
@@ -32,6 +32,10 @@ function show_file() {
   exec $PAGER_CMD "$file"
 }
 
+function view_file() {
+  show_file "$1"
+}
+
 function locate_file() {
   local file="$1"
   exec ls "$file"
@@ -40,31 +44,6 @@ function locate_file() {
 function erase_file() {
   local file="$1"
   exec cp /dev/null "$file"
-}
-
-function execute_edit_command() {
-  local file_type="$1" file_resource="$2"
-  execute_file_command "edit" "$file_type" "$file_resource"
-}
-
-function execute_show_command() {
-  local file_type="$1" file_resource="$2"
-  execute_file_command "show" "$file_type" "$file_resource"
-}
-
-function execute_path_command() {
-  local file_type="$1" file_resource="$2"
-  execute_file_command "path" "$file_type" "$file_resource"
-}
-
-function execute_erase_command() {
-  local file_type="$1" file_resource="$2"
-  execute_file_command "erase" "$file_type" "$file_resource"
-}
-
-function execute_restore_command() {
-  local file_type="$1" file_resource="$2"
-  execute_file_command "restore" "$file_type" "$file_resource"
 }
 
 function execute_file_command() {
@@ -79,7 +58,12 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_ENV_CHANGED_FILE" "$DIB_APP_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_ENV_CHANGED_FILE" "$DIB_APP_ENV_CHANGED_FILE_COPY" && \
+              file_changes_detected "$DIB_APP_ENV_CHANGED_FILE_COPY" "$DIB_APP_ENV_CHANGED_FILE" && \
+              update_env_file \
+                "$DIB_APP_ENV_FILE" \
+                "$DIB_APP_ENV_CHANGED_FILE" \
+                "$DIB_APP_ENV_SYMLINKED_FILE"
             ;;
             show)
               show_file "$DIB_APP_ENV_CHANGED_FILE"
@@ -99,7 +83,12 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE" "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE" "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY" && \
+              file_changes_detected "$DIB_APP_SERVICE_ENV_CHANGED_FILE_COPY" "$DIB_APP_ENV_SERVICE_CHANGED_FILE" && \
+              update_env_file \
+                "$DIB_APP_SERVICE_ENV_FILE" \
+                "$DIB_APP_SERVICE_ENV_CHANGED_FILE" \
+                "$DIB_APP_SERVICE_ENV_SYMLINKED_FILE"
             ;;
             show)
               show_file "$DIB_APP_SERVICE_ENV_CHANGED_FILE"
@@ -119,7 +108,12 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_COMMON_ENV_CHANGED_FILE" "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY" && \
+              file_changes_detected "$DIB_APP_COMMON_ENV_CHANGED_FILE_COPY" "$DIB_APP_COMMON_ENV_CHANGED_FILE" && \
+              update_env_file \
+                "$DIB_APP_COMMON_ENV_FILE" \
+                "$DIB_APP_COMMON_ENV_CHANGED_FILE" \
+                "$DIB_APP_COMMON_ENV_SYMLINKED_FILE"
             ;;
             show)
               show_file "$DIB_APP_COMMON_ENV_CHANGED_FILE"
@@ -139,7 +133,12 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE" "$DIB_APP_PROJECT_ENV_CHANGED_FILE_COPY"
+              edit_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE" "$DIB_APP_PROJECT_ENV_CHANGED_FILE_COPY" && \
+              file_changes_detected "$DIB_APP_PROJECT_ENV_CHANGED_FILE_COPY" "$DIB_APP_PROJECT_ENV_CHANGED_FILE" && \
+              update_env_file \
+                "$DIB_APP_PROJECT_ENV_FILE" \
+                "$DIB_APP_PROJECT_ENV_CHANGED_FILE" \
+                "$DIB_APP_PROJECT_ENV_SYMLINKED_FILE"
             ;;
             show)
               show_file "$DIB_APP_PROJECT_ENV_CHANGED_FILE"
@@ -184,10 +183,13 @@ function execute_file_command() {
           case "$command"
           in
             edit)
-              edit_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE_COPY"
+              edit_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE_COPY" 
             ;;
             show)
               show_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+            view)
+              view_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_FILE"
             ;;
             path)
               locate_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
@@ -233,6 +235,9 @@ function execute_file_command() {
             ;;
             show)
               show_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+            view)
+              show_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
             ;;
             path)
               locate_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
@@ -315,6 +320,34 @@ function execute_file_command() {
         ;;
         restore)
           restore_file "$DIB_APP_CACHE_FILE_COPY" "$DIB_APP_CACHE_FILE"
+        ;;
+      esac
+    ;;
+    run)
+      case "$file_resource"
+      in
+        dockercomposefile)
+          case "$command"
+          in
+            edit)
+              edit_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE_COPY" 
+            ;;
+            show)
+              show_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+            view)
+              view_file "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
+            ;;
+            path)
+              locate_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+            erase)
+              erase_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+            restore)
+              restore_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE_COPY" "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE"
+            ;;
+          esac
         ;;
       esac
     ;;

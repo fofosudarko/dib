@@ -1,7 +1,7 @@
 # makefile
 
 .PHONY : dib check_requirements check_docker check_docker_compose \
-        check_kompose check_kubectl check_bash install link uninstall build
+         check_kompose check_kubectl check_bash install link uninstall build discard
 
 source_folder = .
 app_name = dib
@@ -9,7 +9,7 @@ bin_path = /usr/local/bin/$(app_name)
 destination_folder = /usr/local/lib/$(app_name)
 main_program = $(destination_folder)/$(app_name).sh
 copy_exclusions = $(source_folder)/exclude-files.txt
-build_version = v1.0.0-rc2
+build_version = v1.0.0-rc3
 build_location = $(source_folder)/build
 build = $(build_location)/$(app_name)-$(build_version).zip
 build_exclusions = -x '*.git*' -x '*build/*' -x '*.DS_Store*'
@@ -55,3 +55,7 @@ uninstall:
 build:
 	@echo Bundling app to $(build) ...
 	zip -r $(build) $(source_folder)/ $(build_exclusions)
+
+discard:
+	@echo Discarding $(build) ...
+	test ! -f $(build) || rm -f $(build)

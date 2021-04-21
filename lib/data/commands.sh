@@ -2,8 +2,6 @@
 #
 # File: commands.sh -> system commands
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source commands.sh
 #
 #
@@ -17,7 +15,6 @@
 : ${KOMPOSE_CMD="$(which kompose 2> /dev/null)"}
 : ${KUBECTL_CMD="$(which kubectl 2> /dev/null)"}
 : ${NANO_CMD="$(which nano 2> /dev/null)"}
-: ${SHELL_CMD="$(which bash 2> /dev/null)"}
 : ${LESS_CMD="$(which less 2> /dev/null)"}
 
 ## -- finish
