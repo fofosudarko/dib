@@ -2,8 +2,6 @@
 #
 # File: kubernetes.sh -> common kubernetes operations
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source kubernetes.sh
 #
 #
@@ -18,7 +16,7 @@ function set_kubernetes_configs() {
   while read -r kube_config
   do
     [[ -n "$kube_config" ]] && KUBECONFIG="${kube_dir}/${kube_config}:${KUBECONFIG}"
-  done < <(echo -ne "$KUBECONFIGS"| sed -e 's/:/\n/g' -e 's/$/\n/g')
+  done < <(columize_items "$KUBECONFIGS")
 }
 
 function get_kubernetes_contexts() {
@@ -113,7 +111,7 @@ EOF
     
     cd $DIB_APP_COMPOSE_K8S_DIR
     
-    $KOMPOSE_CMD convert -f $changed_compose_file
+    $KOMPOSE_CMD convert -f "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
     
     if [[ "$KUBERNETES_SERVICE_LABEL" != "io.kompose.service" ]]
     then
@@ -125,19 +123,10 @@ EOF
     rm -f *.sed-backup 2> /dev/null
   }
   
-  function docker_compose_file_changed() {
-    ensure_paths_exist "$changed_compose_file"
-    return $(detect_file_changed "$original_compose_file" "$changed_compose_file")
-  }
-  
   msg 'Generating Kubernetes manifests ...'
 
-  local original_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.original.yml
-  local changed_compose_file=$DIB_APP_COMPOSE_DIR/docker-compose.changed.yml
-  local template_compose_file="$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
-
-  ensure_paths_exist "$template_compose_file"
-  format_docker_compose_template "$template_compose_file" "$changed_compose_file"
+  ensure_paths_exist "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
+  format_docker_compose_template "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
 
   docker_compose_file_changed && DIB_DOCKER_COMPOSE_FILE_CHANGED=1
   kubernetes_resources_annotations_changed && DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=1
@@ -147,18 +136,17 @@ EOF
   app_project_env_file_changed && DIB_APP_PROJECT_ENV_FILE_CHANGED=1
 
   if [[ "$DIB_DOCKER_COMPOSE_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
-    [[ "$DIB_APP_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$DIB_APP_COMMON_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$DIB_APP_PROJECT_ENV_FILE_CHANGED" -eq 0 ]] && \
-    [[ "$DIB_APP_SERVICE_ENV_FILE_CHANGED" -eq 0 ]]
+     [[ "$DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED" -eq 0 ]] && \
+     [[ "$DIB_APP_ENV_FILE_CHANGED" -eq 0 ]] && \
+     [[ "$DIB_APP_COMMON_ENV_FILE_CHANGED" -eq 0 ]] && \
+     [[ "$DIB_APP_PROJECT_ENV_FILE_CHANGED" -eq 0 ]] && \
+     [[ "$DIB_APP_SERVICE_ENV_FILE_CHANGED" -eq 0 ]]
   then
     return 1
   fi
   
   convert_to_kubernetes_manifests
   update_kubernetes_resources_with_annotations
-  cp $changed_compose_file $original_compose_file
   
   return 0
 }
@@ -267,6 +255,13 @@ function patch_kubernetes_deployment() {
   cat <<EOF
   $KUBECTL_CMD patch -n $APP_KUBERNETES_NAMESPACE -f $DIB_APP_COMPOSE_K8S_DIR/*deployment* --patch '$kubernetes_deployment_patch'
 EOF
+}
+
+function deploy_to_k8s_cluster() {
+  if ! deploy_to_kubernetes_cluster 
+  then
+    msg 'Kubernetes manifests deployed unsuccessfully'
+  fi
 }
 
 ## -- finish

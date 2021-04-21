@@ -2,8 +2,6 @@
 #
 # File: spring.sh -> common spring operations
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source spring.sh
 #
 #

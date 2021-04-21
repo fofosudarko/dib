@@ -2,8 +2,6 @@
 #
 # File: init.sh -> init variables
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source init.sh
 #
 #
@@ -14,11 +12,10 @@
 
 # filters
 
-: ${DIB_RUN_COMMANDS='^(build|build\-push|build\-push\-deploy|push|deploy|doctor)$'}
-: ${DIB_APP_ENVIRONMENTS='^(dev|develop|development|staging|beta|prod|production|demo|alpha)$'}
-: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next|rails|django)$'}
+: ${DIB_APP_ENVIRONMENTS='^(dev|develop|development|test|staging|beta|prod|production|demo|alpha)$'}
+: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next|rails|django|hugo|jekyll|gatsby|dotnet|vue|laravel)$'}
 : ${DIB_APP_INVALID_PATH_TOKENS='example\-(project|framework|environment|service)'}
-: ${DIB_APP_CONFIG_EXCLUDE_PATTERNS='*Dockerfile*\n*docker-compose*\n*application*properties\n'}
+: ${DIB_APP_CONFIG_EXCLUDE_PATTERNS='application*properties\n*copy'}
 : ${DIB_APP_DATABASE_KEY_PATTERN='^[[:alnum:]]+$'}
 : ${DIB_APP_DATABASE_VALUE_PATTERN='^[[:alnum:]]+\:[[:alnum:]_-]+\:[[:alnum:]_-]+$'}
 
@@ -27,15 +24,9 @@
 : ${BUILD_DATE=`date +'%Y%m%d'`}
 : ${USE_GIT_COMMIT=${DIB_USE_GIT_COMMIT:-'false'}}
 : ${USE_BUILD_DATE=${DIB_USE_BUILD_DATE:-'false'}}
-: ${USE_SUDO=${DIB_USE_SUDO:-'false'}}
+: ${USE_APP_ENVIRONMENT=${DIB_USE_APP_ENVIRONMENT:-'false'}}
 : ${EDITOR_CMD=${EDITOR:-"$NANO_CMD"}}
 : ${PAGER_CMD=${PAGER:-"$LESS_CMD"}}
-
-# users
-
-: ${DIB_USER=${DIB_USER:-'docker'}}
-: ${CI_USER=${DIB_CI_USER:-'jenkins'}}
-: ${SUPER_USER=${DIB_SUPER_USER:-'root'}}
 
 # placeholders
 
@@ -44,12 +35,11 @@
 : ${DIB_APP_IMAGE_PLACEHOLDER='example-service'}
 : ${DIB_APP_FRAMEWORK_PLACEHOLDER='example-framework'}
 : ${DIB_APP_ENVIRONMENT_PLACEHOLDER='example-environment'}
-: ${DIB_APP_VERSION='v1.0.0-rc2'}
+: ${DIB_APP_VERSION='v1.0.0-rc3'}
 
 # dirs
 
 : ${DIB_HOME=${DIB_HOME:-$DIB_HOME_PLACEHOLDER}}
-: ${DIB_CACHE="${DIB_HOME}/.cache"}
 : ${DIB_APPS_DIR="$DIB_HOME/apps"}
 : ${DIB_APPS_CONFIG_DIR="$DIB_HOME/config"}
 : ${DIB_APPS_KEYSTORES_DIR="$DIB_HOME/keystores"}
@@ -57,7 +47,10 @@
 : ${DIB_APPS_ENV_DIR="$DIB_HOME/env"}
 : ${DIB_APPS_K8S_ANNOTATIONS_DIR="$DIB_HOME/k8s-annotations"}
 : ${DIB_APPS_KUBERNETES_DIR="$DIB_HOME/.kube"}
-: ${DIB_APPS_CACHE_DIR="$DIB_HOME/cache"}
+: ${DIB_APPS_CACHE_DIR="$DIB_HOME/.cache"}
+: ${DIB_APPS_SECRETS_DIR="$DIB_HOME/.secrets"}
+: ${DIB_APPS_RUN_DIR="$DIB_HOME/run"}
+
 
 # templates
 

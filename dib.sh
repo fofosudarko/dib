@@ -2,8 +2,6 @@
 #
 # File: dib.sh -> Build, push docker images to a registry and/or deploy to a Kubernetes cluster
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: bash dib.sh DIB_RUN_COMMAND <MORE_COMMANDS>
 #
 #
@@ -15,8 +13,12 @@ set -eu
 : ${SCRIPT_DIR=$(dirname $(realpath ${BASH_SOURCE[0]}))}
 : ${LIB_DIR="${SCRIPT_DIR}/lib"}
 
-function load_init_functions() {  
-  source "$LIB_DIR/common.sh"
+function load_init_functions() {
+  source "$LIB_DIR/functions/help.sh"
+  source "$LIB_DIR/functions/cache.sh"
+  source "$LIB_DIR/functions/common.sh"
+  source "$LIB_DIR/functions/executors.sh"
+  source "$LIB_DIR/functions/database.sh"
 }
 
 function load_commands() {  
@@ -40,36 +42,22 @@ function load_template() {
 }
 
 function load_more_functions() {
-  source "$LIB_DIR/file.sh"
-  source "$LIB_DIR/spring.sh"
-  source "$LIB_DIR/docker.sh"
-  source "$LIB_DIR/kubernetes.sh"
+  source "$LIB_DIR/functions/file.sh"
+  source "$LIB_DIR/functions/spring.sh"
+  source "$LIB_DIR/functions/docker.sh"
+  source "$LIB_DIR/functions/kubernetes.sh"
 }
 
 function load_cache_file() {
-  if [[ -f "$DIB_APP_CACHE_FILE" ]]
-  then
-    source_envvars_from_file "$DIB_APP_CACHE_FILE"
-  else
-    :
-  fi
+  [[ -f "$DIB_APP_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_CACHE_FILE" || :
 }
 
 function load_root_cache_file() {
-  if [[ -z "$DIB_APP_KEY" ]]
-  then
-    msg "Please provide DIB_APP_KEY and try again."
-    exit 1
-  fi
+  [[ -z "$DIB_APP_KEY" ]] && { msg "Please provide DIB_APP_KEY and try again."; exit 1; }
 
   format_root_cache_file
 
-  if [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]]
-  then
-    source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE"
-  else
-    :
-  fi
+  [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE" || :
 }
 
 load_commands
@@ -82,6 +70,8 @@ fi
 
 DIB_RUN_COMMAND="${1:-build}"
 shift
+
+should_show_help "$@" && execute_help_command "$DIB_RUN_COMMAND"
 
 DIB_HOME=${DIB_HOME/\~/$HOME}
 DIB_APP_KEY=${DIB_APP_KEY:-''}
@@ -113,7 +103,6 @@ DIB_APP_ENV_FILE_CHANGED=0
 DIB_APP_COMMON_ENV_FILE_CHANGED=0
 DIB_APP_PROJECT_ENV_FILE_CHANGED=0
 DIB_APP_SERVICE_ENV_FILE_CHANGED=0
-DIB_APP_CONTAINERS_RESTART=0
 
 KUBECONFIG=
 
@@ -138,13 +127,10 @@ then
 
   update_core_variables_if_changed
   execute_goto_command
-elif [[ "$DIB_RUN_COMMAND" == "help" ]]
-then
-  execute_help_command
 elif [[ "$DIB_RUN_COMMAND" == "doctor" ]]
 then
   execute_doctor_command
-elif [[ "$DIB_RUN_COMMAND" == "get-key" ]]
+elif [[ "$DIB_RUN_COMMAND" == "get:key" ]]
 then
   if [[ "$#" -ge 1 ]]
   then
@@ -152,7 +138,7 @@ then
   fi
 
   execute_get_key_command "$USER_DIB_APP_GET_VALUE"
-elif [[ "$DIB_RUN_COMMAND" == "get-project" ]]
+elif [[ "$DIB_RUN_COMMAND" == "get:project" ]]
 then
   if [[ "$#" -ge 1 ]]
   then
@@ -160,17 +146,24 @@ then
   fi
 
   execute_get_project_command "$USER_DIB_APP_GET_VALUE"
-elif [[ "$DIB_RUN_COMMAND" == "version" ]]
-then
-  execute_version_command
-elif [[ "$DIB_RUN_COMMAND" == "get-all" ]]
+elif [[ "$DIB_RUN_COMMAND" == "get:all" ]]
 then
   execute_get_all_command
+elif [[ "$DIB_RUN_COMMAND" == "version" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "--version" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "-v" ]]
+then
+  execute_version_command
+elif [[ "$DIB_RUN_COMMAND" == "help" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "--help" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "-h" ]]
+then
+  execute_help_command
 fi
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]] || \
-   [[ "$DIB_RUN_COMMAND" == "build-push" ]] || \
-   [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]] || \
+   [[ "$DIB_RUN_COMMAND" == "build:push" ]] || \
+   [[ "$DIB_RUN_COMMAND" == "build:push:deploy" ]] || \
    [[ "$DIB_RUN_COMMAND" == "push" ]] || \
    [[ "$DIB_RUN_COMMAND" == "deploy" ]] || \
    [[ "$DIB_RUN_COMMAND" == "generate" ]]
@@ -184,7 +177,8 @@ elif [[ "$DIB_RUN_COMMAND" == "edit" ]] || \
      [[ "$DIB_RUN_COMMAND" == "show" ]] || \
      [[ "$DIB_RUN_COMMAND" == "path" ]] || \
      [[ "$DIB_RUN_COMMAND" == "restore" ]] || \
-     [[ "$DIB_RUN_COMMAND" == "erase" ]]
+     [[ "$DIB_RUN_COMMAND" == "erase" ]] || \
+     [[ "$DIB_RUN_COMMAND" == "view" ]]
 then
   if [[ "$#" -ge 3 ]]
   then
@@ -199,7 +193,7 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
 then
   [[ "$#" -ge 1 ]] && DIB_ENV_TYPE="$1"
-elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
+elif [[ "$DIB_RUN_COMMAND" == "edit:deploy" ]]
 then
   if [[ "$#" -ge 4 ]]
   then
@@ -222,24 +216,12 @@ then
     USER_DIB_APP_IMAGE="$1"
     USER_DIB_APP_BUILD_SRC="$2"
   fi
-elif [[ "$DIB_RUN_COMMAND" == "run" ]]
-then
-  if [[ "$#" -ge 3 ]]
-  then
-    USER_DIB_APP_IMAGE="$1"
-    USER_DIB_APP_PORTS="$2"
-    USER_DIB_APP_ENV_FILES="$3"
-  elif [[ "$#" -ge 2 ]]
-  then
-    USER_DIB_APP_IMAGE="$1"
-    USER_DIB_APP_PORTS="$2"
-  fi
 fi
 
 load_root_cache_file
-update_core_variables_if_changed
+update_cache_data_if_changed "core"
 load_core
-update_other_variables_if_changed
+update_cache_data_if_changed "midsection"
 
 if [[ "$DIB_RUN_COMMAND" == "copy" ]]
 then
@@ -255,20 +237,22 @@ then
   execute_switch_command
 fi
 
+ensure_core_variables_validity
 load_paths
 load_cache_file
+update_cache_data_if_changed "template"
 load_template
 load_more_functions
 
 if [[ "$DIB_RUN_COMMAND" == "build" ]]
 then
   execute_build_command
-elif [[ "$DIB_RUN_COMMAND" == "build-push" ]]
+elif [[ "$DIB_RUN_COMMAND" == "build:push" ]]
 then
   execute_build_and_push_command
-elif [[ "$DIB_RUN_COMMAND" == "build-push-deploy" ]]
+elif [[ "$DIB_RUN_COMMAND" == "build:push:deploy" ]]
 then
-  execute_build_push_and_deploy_command
+  execute_build_push_deploy_command
 elif [[ "$DIB_RUN_COMMAND" == "push" ]]
 then
   execute_push_command
@@ -302,15 +286,13 @@ then
 elif [[ "$DIB_RUN_COMMAND" == "restore" ]]
 then
   execute_restore_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+elif [[ "$DIB_RUN_COMMAND" == "view" ]]
+then
+  execute_view_command "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
 elif [[ "$DIB_RUN_COMMAND" == "env" ]]
 then
-  if [[ -z "$DIB_ENV_TYPE" ]]
-  then
-    get_all_envvars
-  else
-    execute_env_command "$DIB_ENV_TYPE"
-  fi
-elif [[ "$DIB_RUN_COMMAND" == "edit-deploy" ]]
+  [[ -z "$DIB_ENV_TYPE" ]] && get_all_envvars || execute_env_command "$DIB_ENV_TYPE"
+elif [[ "$DIB_RUN_COMMAND" == "edit:deploy" ]]
 then
   msg 'Oops, not implemented yet.'
 else

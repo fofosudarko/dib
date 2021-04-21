@@ -2,13 +2,57 @@
 #
 # File: docker.sh -> common docker operations
 #
-# (c) 2021 Frederick Ofosu-Darko <fofosudarko@gmail.com>
-#
 # Usage: source docker.sh
 #
 #
 
 ## - start here
+
+function copy_docker_build_files() { 
+  local build_files="$1" docker_project="$2"
+  
+  msg 'Copying docker build files ...'
+
+  ensure_paths_exist "$docker_project"
+  format_docker_compose_template "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_DOCKER_COMPOSE_FILE"
+  rsync -av --exclude='*.template*' --exclude='*.copy' $build_files $docker_project 2> /dev/null
+}
+
+function format_docker_compose_template() {
+  local docker_compose_template="$1" docker_compose_out="$2"
+  
+  if [[ -s "$docker_compose_template" ]]
+  then
+    sed -e "s/@@DIB_APP_IMAGE@@/${APP_IMAGE}/g" \
+    -e "s/@@DIB_APP_PROJECT@@/${APP_PROJECT}/g" \
+    -e "s/@@DIB_APPS_CONTAINER_REGISTRY@@/${APPS_CONTAINER_REGISTRY}/g" \
+    -e "s/@@DIB_APP_IMAGE_TAG@@/${APP_IMAGE_TAG}/g" \
+    -e "s/@@DIB_APP_ENVIRONMENT@@/${APP_ENVIRONMENT}/g" \
+    -e "s/@@DIB_APP_FRAMEWORK@@/${APP_FRAMEWORK}/g" \
+    -e "s/@@DIB_APP_NPM_RUN_COMMANDS@@/${APP_NPM_RUN_COMMANDS}/g" \
+    -e "s/@@DIB_KOMPOSE_IMAGE_PULL_SECRET@@/${KOMPOSE_IMAGE_PULL_SECRET}/g" \
+    -e "s/@@DIB_KOMPOSE_IMAGE_PULL_POLICY@@/${KOMPOSE_IMAGE_PULL_POLICY}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_TYPE@@/${KOMPOSE_SERVICE_TYPE}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_EXPOSE@@/${KOMPOSE_SERVICE_EXPOSE}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_EXPOSE_TLS_SECRET@@/${KOMPOSE_SERVICE_EXPOSE_TLS_SECRET}/g" \
+    -e "s/@@DIB_KOMPOSE_SERVICE_NODEPORT_PORT@@/${KOMPOSE_SERVICE_NODEPORT_PORT}/g" \
+    -e "s/@@DIB_APP_BASE_HREF@@/${APP_BASE_HREF//\//\\/}/g" \
+    -e "s/@@DIB_APP_DEPLOY_URL@@/${APP_DEPLOY_URL//\//\\/}/g" \
+    -e "s/@@DIB_APP_BUILD_CONFIGURATION@@/${APP_BUILD_CONFIGURATION}/g" \
+    -e "s/@@DIB_APP_REPO@@/${APP_REPO}/g" \
+    -e "s/@@DIB_APP_NPM_BUILD_COMMAND_DELIMITER@@/${APP_NPM_BUILD_COMMAND_DELIMITER}/g" \
+    -e "s/@@DIB_DOCKER_COMPOSE_NETWORK_MODE@@/${DOCKER_COMPOSE_NETWORK_MODE}/g" \
+    -e "s/@@DIB_DOCKER_COMPOSE_DEPLOY_REPLICAS@@/${DOCKER_COMPOSE_DEPLOY_REPLICAS}/g" \
+    -e "s/@@DIB_APP_PORT@@/${APP_PORT}/g" \
+    -e "s/@@DIB_APP_RUN_APP_ENV_FILE@@/${DIB_APP_ENV_CHANGED_FILE//\//\\/}/g" \
+    -e "s/@@DIB_APP_RUN_SERVICE_ENV_FILE@@/${DIB_APP_SERVICE_ENV_CHANGED_FILE//\//\\/}/g" \
+    -e "s/@@DIB_APP_RUN_COMMON_ENV_FILE@@/${DIB_APP_COMMON_ENV_CHANGED_FILE//\//\\/}/g" \
+    -e "s/@@DIB_APP_RUN_PROJECT_ENV_FILE@@/${DIB_APP_PROJECT_ENV_CHANGED_FILE//\//\\/}/g" \
+      "$docker_compose_template" 1> "$docker_compose_out"
+  else
+    [[ ! -f "$docker_compose_out" ]] && touch "$docker_compose_out"
+  fi
+}
 
 function select_docker_build_process() {
   if [[ -s "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" ]]
@@ -20,32 +64,29 @@ function select_docker_build_process() {
 }
 
 function build_docker_image_from_compose_file() {
-  local docker_file="$DOCKER_FILE"
-  local docker_compose_file="$DIB_APP_BUILD_DEST/docker-compose.yml"
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
 
-  if [[ ! -f "$docker_compose_file" ]]
+  if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]
   then
     echo No docker-compose file found
     exit 1
   fi
 
-  if [[ ! -f "$docker_file" ]]
+  if [[ ! -f "$DOCKER_FILE" ]]
   then
     echo No Dockerfile found
     exit 1
   fi
 
-  $DOCKER_COMPOSE_CMD -f $docker_compose_file build
+  $DOCKER_COMPOSE_CMD -f $DOCKER_COMPOSE_FILE build
 
   return "$?"
 }
 
 function build_docker_image_from_file() {
-  local docker_file="$DOCKER_FILE"
   local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
 
-  if [[ ! -f "$docker_file" ]]
+  if [[ ! -f "$DOCKER_FILE" ]]
   then
     echo No Dockerfile found
     exit 1
@@ -57,14 +98,15 @@ function build_docker_image_from_file() {
 }
 
 function build_docker_image() {
+  create_directory_if_not_exist "$MAVEN_WRAPPER_PROPERTIES_SRC"
   copy_config_files "$DIB_APP_CONFIG_DIR" "$DIB_APP_BUILD_DEST"
-  copy_docker_build_files "$DIB_APP_DOCKER_BUILD_FILES" "$DIB_APP_BUILD_DEST"
+  copy_docker_build_files "$DIB_APP_CONFIG_DOCKER_FILE $DIB_APP_CONFIG_DOCKER_COMPOSE_FILE" "$DIB_APP_BUILD_DEST"
   
   case "$APP_FRAMEWORK" in
     spring)
       msg 'Building spring docker image ...'
       
-      ensure_paths_exist "$SPRING_APPLICATION_PROPERTIES $MAVEN_WRAPPER_PROPERTIES_SRC"
+      ensure_paths_exist "$SPRING_APPLICATION_PROPERTIES"
       add_spring_application_properties
       add_maven_wrapper_properties "$MAVEN_WRAPPER_PROPERTIES_SRC" "$MAVEN_WRAPPER_PROPERTIES_DEST"
       add_spring_keystores "$DOCKER_FILE" "$DIB_APP_KEYSTORES_SRC" "$DIB_APP_KEYSTORES_DEST"
@@ -115,6 +157,8 @@ function push_docker_image() {
 
   msg 'Pushing docker image ...'
 
+  ensure_paths_exist "$DOCKER_LOGIN_PASSWORD"
+
   $DOCKER_CMD logout 2> /dev/null
   $DOCKER_CMD login --username "$DOCKER_LOGIN_USERNAME" --password-stdin < "$DOCKER_LOGIN_PASSWORD" "$DIB_APPS_CONTAINER_REGISTRY"
   $DOCKER_CMD tag "$target_image" "$remote_target_image"
@@ -142,76 +186,46 @@ function is_docker_container_paused() {
   [[ -n "$result" ]] && return 0 || return 1
 }
 
-function columnize_items() {
-  echo -ne "$1" | sed -E -e 's/[[:space:]]+//g' -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
+function is_docker_image_changed() {
+  local latest_image="${APP_IMAGE}:${APP_IMAGE_TAG}"
+  local current_image=$($DOCKER_CMD container ps --filter="name=${APP_IMAGE}" --format '{{.Image}}' )
+  
+  [[ "$current_image" != "$latest_image" ]] && return 0 || return 1
 }
 
 function run_docker_container() {
 
-  function get_app_ports() {
-    if [[ -n "$DIB_APP_PORTS" ]]
-    then
-      while read -r port
-      do
-        ports="-p $port:$port $ports"
-      done < <(columnize_items "$DIB_APP_PORTS")
-    fi
-  }
-
-  function get_app_env_files() {
-    if [[ -n "$DIB_APP_ENV_FILES" ]]
-    then
-      while read -r env_file
-      do
-        case "$env_file"
-        in
-          app-env)
-            [[ -s "$DIB_APP_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_ENV_CHANGED_FILE $env_files"
-          ;;
-          service-env)
-            [[ -s "$DIB_APP_SERVICE_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_SERVICE_ENV_CHANGED_FILE $env_files"
-          ;;
-          common-env)
-            [[ -s "$DIB_APP_COMMON_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_COMMON_ENV_CHANGED_FILE $env_files"
-          ;;
-          project-env)
-            [[ -s "$DIB_APP_PROJECT_ENV_CHANGED_FILE" ]] && env_files="--env-file $DIB_APP_PROJECT_ENV_CHANGED_FILE $env_files"
-          ;;
-        esac
-      done < <(columnize_items "$DIB_APP_ENV_FILES")
-    fi
-  }
-
-  function save_data_to_root_cache_on_run() {
+  function save_data_to_cache_on_run() {
     save_data_to_root_cache
+    save_data_to_app_cache
   }
 
-  local ports= env_files= target_image="$APP_IMAGE:$APP_IMAGE_TAG"
+  local target_image="$APP_IMAGE:$APP_IMAGE_TAG"
 
   msg 'Running docker container ...'
 
-  get_app_ports
-  get_app_env_files
-
+  format_docker_compose_template "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
+    
   if is_docker_container_running
   then
-    if [[ "$DIB_APP_CONTAINERS_RESTART" == "1" ]]
+    if is_docker_image_changed
     then
-      $DOCKER_CMD container stop $APP_IMAGE
-      $DOCKER_CMD container rm -f $APP_IMAGE
-      $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+      $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" stop
+      $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" rm -f
+      $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" up -d
     else
-      $DOCKER_CMD container restart $APP_IMAGE
+      $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" restart
     fi
   elif is_docker_container_dead || is_docker_container_exited || is_docker_container_paused
   then
-    $DOCKER_CMD container rm -f $APP_IMAGE
-    $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+    $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" down
+    $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" rm -f
+    $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" up -d
   else
-    $DOCKER_CMD run --detach --name $APP_IMAGE $ports $env_files $target_image
+    $DOCKER_COMPOSE_CMD -f "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" up -d
   fi
 
-  save_data_to_root_cache_on_run
+  save_data_to_cache_on_run
 }
 
 function stop_docker_container() {
