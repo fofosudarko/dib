@@ -307,6 +307,7 @@ function execute_file_command() {
       case "$command"
       in
         edit)
+          [[ -s "$DIB_APP_CACHE_FILE" ]] || save_data_to_app_cache
           edit_file "$DIB_APP_CACHE_FILE" "$DIB_APP_CACHE_FILE_COPY"
         ;;
         show)
