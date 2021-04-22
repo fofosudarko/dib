@@ -18,7 +18,7 @@ function copy_config_files() {
   msg 'Copying configuration files ...'
 
   ensure_paths_exist "$config_dir $app_build_dest"
-  rsync -av --exclude="application*properties" --exclude="*.copy" $config_dir/ $app_build_dest
+  rsync -av --exclude="application*properties*" --exclude="*.copy" $config_dir/ $app_build_dest
 }
 
 function copy_docker_project() {
@@ -106,6 +106,11 @@ function get_app_image_tag() {
     app_image_tag=$(echo -ne $GIT_COMMIT | cut -c1-10)
   fi
 
+  if [[ "$USE_MERCURIAL_REVISION" = "true" ]] && [[ -n "$MERCURIAL_REVISION" ]]
+  then
+    app_image_tag=$(echo -ne $MERCURIAL_REVISION | cut -c1-10)
+  fi
+
   if [[ "$USE_BUILD_DATE" = "true" ]] && [[ -n "$BUILD_DATE" ]]
   then
     app_image_tag="${BUILD_DATE}-${app_image_tag}"
@@ -169,18 +174,6 @@ function file_changes_detected() {
   else
     return 0
   fi
-}
-
-function env_file_changed() {
-  local env_file="$1" original_env_file="$2" changed_env_file="$3" symlinked_env_file="$4"
-  
-  if file_changes_detected "$original_env_file" "$changed_env_file" || [[ ! -e "$symlinked_env_file" ]]
-  then
-    update_env_file "$env_file" "$changed_env_file" "$original_env_file" "$symlinked_env_file"
-    return 0
-  fi
-
-  return 1
 }
   
 function docker_compose_file_changed() {
@@ -331,10 +324,11 @@ function check_parameter_validity() {
 }
 
 function source_envvars_from_file() {
-  local file="$1" tmpfile=$(mktemp)
+  local file="$1"
 
-  sed -E -e '/^export/!s/^/export /g' -e '/^$/d' -e '/^[[:space:]]+$/d' "$file" 1> "$tmpfile"
-  source "$tmpfile" && rm -f "$tmpfile"
+  sed -E -e '/^export/!s/^/export /g' -e '/^$/d' -e '/^[[:space:]]+$/d' "$file" 1> "$DIB_APP_TMP_FILE"
+  
+  source "$DIB_APP_TMP_FILE"
 }
 
 function get_all_envvars() {
@@ -428,6 +422,38 @@ function ensure_core_variables_validity() {
 
 function columnize_items() {
   echo -ne "$1" | sed -E -e 's/[[:space:]]+//g' -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
+}
+
+function load_app_cache_file() {
+  [[ -f "$DIB_APP_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_CACHE_FILE" || :
+}
+
+function load_root_cache_file() {
+  [[ -z "$DIB_APP_KEY" ]] && { msg "Please provide DIB_APP_KEY and try again."; exit 1; }
+
+  format_root_cache_file
+
+  [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE" || :
+}
+
+function perform_root_cache_operations() {
+  load_root_cache_file
+  update_cache_data_if_changed "core"
+  load_core_data
+  update_cache_data_if_changed "midsection"
+}
+
+function perform_app_cache_operations() {
+  ensure_core_variables_validity
+  load_paths_data
+  load_app_cache_file
+  update_cache_data_if_changed "template"
+  load_template_data
+  load_more_functions
+}
+
+function remove_tmp_file() {
+  [[ -f "$DIB_APP_TMP_FILE" ]] && rm -f "$DIB_APP_TMP_FILE"
 }
 
 ## -- finish

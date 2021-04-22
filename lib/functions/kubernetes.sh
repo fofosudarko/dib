@@ -115,12 +115,12 @@ EOF
     
     if [[ "$KUBERNETES_SERVICE_LABEL" != "io.kompose.service" ]]
     then
-      sed -i'.sed-backup' -E "s/io\.kompose\.service\:/${KUBERNETES_SERVICE_LABEL}:/g" *
+      sed -i '.sed-backup' -E "s/io\.kompose\.service\:/${KUBERNETES_SERVICE_LABEL}:/g" * 2> /dev/null
     fi
     
-    sed -i'.sed-backup' -E "s/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g" *configmap* 2> /dev/null
+    sed -i '.sed-backup' -E "s/${KUBERNETES_SERVICE_LABEL}\: ${APP_IMAGE}-/${KUBERNETES_SERVICE_LABEL}: /g" *configmap* 2> /dev/null
 
-    rm -f *.sed-backup 2> /dev/null
+    rm -f *.sed-backup
   }
   
   msg 'Generating Kubernetes manifests ...'

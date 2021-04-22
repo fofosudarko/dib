@@ -68,22 +68,22 @@ function get_project_value_by_app_key() {
 function remove_entry_by_app_key() {
   local app_key="$1"
 
-  if [[ -f "$DIB_APP_DATABASE_FILE" ]]
+  if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$app_key" ]]
   then
-    sed -i '.sed-backup' -e "/${app_key}/d" "$DIB_APP_DATABASE_FILE" 
-    rm -f '*.sed-backup'
+    sed -e "/${app_key}/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
+    cp "$DIB_APP_TMP_FILE" "$DIB_APP_DATABASE_FILE"
   fi
-}
+} 2> /dev/null
 
 function remove_entry_by_project_value() {
   local project_value="$1"
 
-  if [[ -f "$DIB_APP_DATABASE_FILE" ]]
+  if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$project_value" ]]
   then
-    sed -i '.sed-backup' -e "/${project_value}/d" "$DIB_APP_DATABASE_FILE" 
-    rm -f '*.sed-backup'
+    sed -e "/${project_value}/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
+    cp "$DIB_APP_TMP_FILE" "$DIB_APP_DATABASE_FILE"
   fi
-}
+} 2> /dev/null
 
 function get_all_database_entries() {
   [[ -f "$DIB_APP_DATABASE_FILE" ]] && exec cat "$DIB_APP_DATABASE_FILE"
