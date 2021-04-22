@@ -22,26 +22,26 @@ function copy_config_files() {
 }
 
 function copy_docker_project() {
-  local ci_project="$1" docker_project="$2" gitignore_patterns= hgignore_patterns=
+  local gitignore_patterns= hgignore_patterns=
 
   msg 'Copying docker project ...'
 
-  if [[ -n "$ci_project" ]]
+  if [[ -n "$DIB_APP_BUILD_SRC" ]]
   then
-    ensure_paths_exist "$docker_project"
+    ensure_paths_exist "$DIB_APP_BUILD_DEST"
 
-    if [[ -f "$ci_project/.gitignore" ]]
+    if [[ -f "$DIB_APP_BUILD_SRC/.gitignore" ]]
     then
-      gitignore_patterns="--exclude-from=$ci_project/.gitignore"
+      gitignore_patterns="--exclude-from=$DIB_APP_BUILD_SRC/.gitignore"
     fi
 
-    if [[ -f "$ci_project/.hgignore" ]]
+    if [[ -f "$DIB_APP_BUILD_SRC/.hgignore" ]]
     then
-      hgignore_patterns="--exclude-from=$ci_project/.hgignore"
+      hgignore_patterns="--exclude-from=$DIB_APP_BUILD_SRC/.hgignore"
     fi
 
-    rm -rf $docker_project/*
-    rsync -av --exclude='.git/' $gitignore_patterns $hgignore_patterns $ci_project/ $docker_project
+    rm -rf $DIB_APP_BUILD_DEST/*
+    rsync -av --exclude='.git/' $gitignore_patterns $hgignore_patterns $DIB_APP_BUILD_SRC/ $DIB_APP_BUILD_DEST
   fi
 }
 
