@@ -62,6 +62,7 @@ function execute_switch_command() {
   USER_DIB_APP_ENVIRONMENT="${2:-}"
   
   should_show_help "$USER_DIB_APP_IMAGE" && show_switch_help
+  check_app_key_validity
   perform_root_cache_operations
   load_core_data
   ensure_core_variables_validity
@@ -94,8 +95,31 @@ function execute_copy_command() {
   perform_root_cache_operations
   load_core_data
   set_project_directories_on_copy
-  copy_docker_project "$DIB_APP_BUILD_SRC" "$DIB_APP_BUILD_DEST"
+  copy_docker_project
   save_data_to_root_cache_on_copy
+}
+
+function execute_copy_env_command() {
+  USER_DIB_APP_IMAGE="${1:-}"
+  DIB_APP_DEST_ENV="${2:-}"
+  DIB_APP_SRC_ENV="${3:-}"
+
+  should_show_help "$USER_DIB_APP_IMAGE" && show_copy_env_help
+  perform_root_cache_operations
+  perform_app_cache_operations
+  transfer_dirs_data_from_src_to_dest_env_on_copy_env
+}
+
+function execute_copy_env_new_command() {
+  USER_DIB_APP_IMAGE="${1:-}"
+  DIB_APP_IMAGE_NEW="${2:-}"
+  DIB_APP_DEST_ENV="${3:-}"
+  DIB_APP_SRC_ENV="${4:-}"
+
+  should_show_help "$USER_DIB_APP_IMAGE" && show_copy_env_new_help
+  perform_root_cache_operations
+  perform_app_cache_operations
+  transfer_dirs_data_from_src_to_dest_env_on_copy_env_new
 }
 
 function execute_reset_command() {
@@ -233,22 +257,19 @@ function execute_get_all_command() {
 }
 
 function execute_env_command() {
-  DIB_ENV_TYPE="${1:-}"
+  DIB_APP_ENV_TYPE="${1:-}"
 
-  should_show_help "$DIB_ENV_TYPE" && show_env_help
+  should_show_help "$DIB_APP_ENV_TYPE" && show_env_help
   perform_root_cache_operations
   perform_app_cache_operations
 
-  case "$DIB_ENV_TYPE"
+  case "$DIB_APP_ENV_TYPE"
   in
     all) 
       get_all_envvars
     ;;
     globals) 
       get_globals_envvars
-    ;;
-    users) 
-      get_users_envvars
     ;;
     app) 
       get_app_envvars
@@ -270,74 +291,74 @@ function execute_env_command() {
 
 function execute_edit_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_edit_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "edit" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "edit"
 }
 
 function execute_show_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_show_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "show" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "show"
 }
 
 function execute_path_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_path_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "path" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "path"
 }
 
 function execute_erase_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_erase_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "erase" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "erase"
 }
 
 function execute_restore_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_restore_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "restore" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "restore"
 }
 
 function execute_view_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_view_help
   perform_root_cache_operations
   perform_app_cache_operations
-  execute_file_command "view" "$DIB_FILE_TYPE" "$DIB_FILE_RESOURCE"
+  execute_file_command "view"
 }
 
 function execute_edit_deploy_command() {
   USER_DIB_APP_IMAGE="${1:-}"
-  DIB_FILE_TYPE="${2:-}"
-  DIB_FILE_RESOURCE="${3:-}"
+  DIB_APP_FILE_TYPE="${2:-}"
+  DIB_APP_FILE_RESOURCE="${3:-}"
   USER_DIB_APP_IMAGE_TAG="${4:-}"
 
   should_show_help "$USER_DIB_APP_IMAGE" && show_edit_deploy_help

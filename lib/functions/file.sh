@@ -47,12 +47,12 @@ function erase_file() {
 }
 
 function execute_file_command() {
-  local command="$1" file_type="$2" file_resource="$3"
+  local command="$1"
 
-  case "$file_type"
+  case "$DIB_APP_FILE_TYPE"
   in
     env)
-      case "$file_resource"
+      case "$DIB_APP_FILE_RESOURCE"
       in
         app-env)
           case "$command"
@@ -157,7 +157,7 @@ function execute_file_command() {
       esac
     ;;
     config)
-      case "$file_resource"
+      case "$DIB_APP_FILE_RESOURCE"
       in
         dockerfile)
           case "$command"
@@ -189,6 +189,10 @@ function execute_file_command() {
               show_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             view)
+              [ -s "$DIB_APP_CONFIG_DOCKER_COMPOSE_FILE" ] || \
+              [ -s "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" ] && \
+              format_docker_compose_template "$DIB_APP_CONFIG_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_CONFIG_DOCKER_COMPOSE_FILE"
+              
               view_file "$DIB_APP_CONFIG_DOCKER_COMPOSE_FILE"
             ;;
             path)
@@ -225,7 +229,7 @@ function execute_file_command() {
       esac
     ;;
     compose)
-      case "$file_resource"
+      case "$DIB_APP_FILE_RESOURCE"
       in
         dockercomposefile)
           case "$command"
@@ -237,7 +241,11 @@ function execute_file_command() {
               show_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             view)
-              show_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
+              [ -s "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE" ] || \
+              [ -s "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE" ] && \
+              format_docker_compose_template "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
+
+              view_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_CHANGED_FILE"
             ;;
             path)
               locate_file "$DIB_APP_COMPOSE_DOCKER_COMPOSE_TEMPLATE_FILE"
@@ -253,10 +261,10 @@ function execute_file_command() {
       esac
     ;;
     k8s-annotations)
-      if [[ -n "$file_resource" ]]
+      if [[ -n "$DIB_APP_FILE_RESOURCE" ]]
       then
-        k8s_resource_annotations_file="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_TEMPLATE/$file_resource}"
-        k8s_resource_annotations_file_copy="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_TEMPLATE/$file_resource}"
+        k8s_resource_annotations_file="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE/$K8S_RESOURCE_TEMPLATE/$DIB_APP_FILE_RESOURCE}"
+        k8s_resource_annotations_file_copy="${DIB_APP_K8S_RESOURCE_ANNOTATIONS_CHANGED_FILE_COPY/$K8S_RESOURCE_TEMPLATE/$DIB_APP_FILE_RESOURCE}"
 
         case "$command"
           in
@@ -279,7 +287,7 @@ function execute_file_command() {
       fi
     ;;
     spring)
-      case "$file_resource"
+      case "$DIB_APP_FILE_RESOURCE"
       in
         application-properties)
           case "$command"
@@ -325,7 +333,7 @@ function execute_file_command() {
       esac
     ;;
     run)
-      case "$file_resource"
+      case "$DIB_APP_FILE_RESOURCE"
       in
         dockercomposefile)
           case "$command"
@@ -337,6 +345,10 @@ function execute_file_command() {
               show_file "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE"
             ;;
             view)
+              [ -s "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" ] || \
+              [ -s "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" ] && \
+              format_docker_compose_template "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
+
               view_file "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
             ;;
             path)

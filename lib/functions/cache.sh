@@ -32,6 +32,125 @@ function set_project_directories() {
   create_directories_if_not_exist "$directories"
 }
 
+function transfer_dirs_data_from_src_to_dest_env_on_copy_env() {
+  
+  function set_copy_env_directories() {
+    
+    [[ "$DIB_APP_SRC_ENV" == "$DIB_APP_DEST_ENV" ]] && return 1
+
+    DIB_APP_CONFIG_DIR_SRC="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_COMPOSE_DIR_SRC="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_K8S_ANNOTATIONS_DIR_SRC="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_COMMON_ENV_DIR_SRC="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_SRC_ENV"
+    DIB_APP_CACHE_DIR_SRC="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_RUN_DIR_SRC="$DIB_APPS_RUN_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+
+    DIB_APP_CONFIG_DIR_DEST="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_DEST_ENV"
+    DIB_APP_COMPOSE_DIR_DEST="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_DEST_ENV"
+    DIB_APP_K8S_ANNOTATIONS_DIR_DEST="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_DEST_ENV"
+    DIB_APP_COMMON_ENV_DIR_DEST="$DIB_APPS_ENV_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_DEST_ENV"
+    DIB_APP_CACHE_DIR_DEST="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_DEST_ENV"
+    DIB_APP_RUN_DIR_DEST="$DIB_APPS_RUN_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_DEST_ENV"
+
+    src_directories="$DIB_APP_CONFIG_DIR_SRC $DIB_APP_COMPOSE_DIR_SRC $DIB_APP_K8S_ANNOTATIONS_DIR_SRC"
+    src_directories="$src_directories $DIB_APP_COMMON_ENV_DIR_SRC $DIB_APP_CACHE_DIR_SRC $DIB_APP_RUN_DIR_SRC"
+
+    dest_directories="$DIB_APP_CONFIG_DIR_DEST $DIB_APP_COMPOSE_DIR_DEST $DIB_APP_K8S_ANNOTATIONS_DIR_DEST"
+    dest_directories="$dest_directories $DIB_APP_COMMON_ENV_DIR_DEST $DIB_APP_CACHE_DIR_DEST $DIB_APP_RUN_DIR_DEST"
+
+    create_directories_if_not_exist "$src_directories"
+    create_directories_if_not_exist "$dest_directories"
+
+    return 0
+  }
+
+  function copy_data_from_src_to_dest_directories() {
+    local src_directories_list=($src_directories) dest_directories_list=($dest_directories)
+    local src_directories_len="${#src_directories_list[@]}" dest_directories_len="${#dest_directories_list[@]}"
+
+    [[ "$src_directories_len" -ne "$dest_directories_len" ]] && return 1
+
+    local dir_index=0
+
+    until [[ "$dir_index" == "$src_directories_len" ]]
+    do
+      msg "Copying data from ${src_directories_list[$dir_index]} to ${dest_directories_list[$dir_index]} ..."
+      rsync -av ${src_directories_list[$dir_index]}/ ${dest_directories_list[$dir_index]}/
+      dir_index=$((dir_index + 1))
+    done
+
+    return 0
+  }
+
+  local src_directories= dest_directories=
+
+  DIB_APP_SRC_ENV="${DIB_APP_SRC_ENV:-$APP_ENVIRONMENT}"
+
+  if [[ -n "$DIB_APP_SRC_ENV" && -n "$DIB_APP_DEST_ENV" ]]
+  then
+    set_copy_env_directories && copy_data_from_src_to_dest_directories
+  fi
+}
+
+function transfer_dirs_data_from_src_to_dest_env_on_copy_env_new() {
+  
+  function set_copy_env_new_directories() {
+    
+    [[ "$APP_IMAGE" == "$DIB_APP_IMAGE_NEW" ]] && return 1
+
+    DIB_APP_CONFIG_DIR_SRC="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_COMPOSE_DIR_SRC="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_K8S_ANNOTATIONS_DIR_SRC="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_CACHE_DIR_SRC="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+    DIB_APP_RUN_DIR_SRC="$DIB_APPS_RUN_DIR/$APP_FRAMEWORK/$APP_PROJECT/$APP_IMAGE/$DIB_APP_SRC_ENV"
+
+    DIB_APP_CONFIG_DIR_DEST="$DIB_APPS_CONFIG_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_IMAGE_NEW/$DIB_APP_DEST_ENV"
+    DIB_APP_COMPOSE_DIR_DEST="$DIB_APPS_COMPOSE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_IMAGE_NEW/$DIB_APP_DEST_ENV"
+    DIB_APP_K8S_ANNOTATIONS_DIR_DEST="$DIB_APPS_K8S_ANNOTATIONS_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_IMAGE_NEW/$DIB_APP_DEST_ENV"
+    DIB_APP_CACHE_DIR_DEST="$DIB_APPS_CACHE_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_IMAGE_NEW/$DIB_APP_DEST_ENV"
+    DIB_APP_RUN_DIR_DEST="$DIB_APPS_RUN_DIR/$APP_FRAMEWORK/$APP_PROJECT/$DIB_APP_IMAGE_NEW/$DIB_APP_DEST_ENV"
+
+    src_directories="$DIB_APP_CONFIG_DIR_SRC $DIB_APP_COMPOSE_DIR_SRC $DIB_APP_K8S_ANNOTATIONS_DIR_SRC"
+    src_directories="$src_directories $DIB_APP_CACHE_DIR_SRC $DIB_APP_RUN_DIR_SRC"
+
+    dest_directories="$DIB_APP_CONFIG_DIR_DEST $DIB_APP_COMPOSE_DIR_DEST $DIB_APP_K8S_ANNOTATIONS_DIR_DEST"
+    dest_directories="$dest_directories $DIB_APP_CACHE_DIR_DEST $DIB_APP_RUN_DIR_DEST"
+
+    create_directories_if_not_exist "$src_directories"
+    create_directories_if_not_exist "$dest_directories"
+
+    return 0
+  }
+
+  function copy_data_from_src_to_dest_directories() {
+    local src_directories_list=($src_directories) dest_directories_list=($dest_directories)
+    local src_directories_len="${#src_directories_list[@]}" dest_directories_len="${#dest_directories_list[@]}"
+
+    [[ "$src_directories_len" -ne "$dest_directories_len" ]] && return 1
+
+    local dir_index=0
+
+    until [[ "$dir_index" == "$src_directories_len" ]]
+    do
+      msg "Copying data from ${src_directories_list[$dir_index]} to ${dest_directories_list[$dir_index]} ..."
+      rsync -av ${src_directories_list[$dir_index]}/ ${dest_directories_list[$dir_index]}/
+      dir_index=$((dir_index + 1))
+    done
+
+    return 0
+  }
+
+  local src_directories= dest_directories=
+
+  DIB_APP_SRC_ENV="${DIB_APP_SRC_ENV:-$APP_ENVIRONMENT}"
+  DIB_APP_DEST_ENV="${DIB_APP_DEST_ENV:-$APP_ENVIRONMENT}"
+
+  if [[ -n "$DIB_APP_SRC_ENV" && -n "$DIB_APP_DEST_ENV" && -n "$DIB_APP_IMAGE_NEW" ]]
+  then
+    set_copy_env_new_directories && copy_data_from_src_to_dest_directories
+  fi
+}
+
 function update_core_variables_if_changed() {
   if [[ -n "$USER_DIB_APP_PROJECT" && "$DIB_APP_PROJECT" != "$USER_DIB_APP_PROJECT" ]]
   then
