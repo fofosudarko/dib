@@ -78,6 +78,9 @@ DIB_APP_IMAGE_TAG=
 DIB_APP_FILE_TYPE=
 DIB_APP_FILE_RESOURCE=
 DIB_APP_ENV_TYPE=
+DIB_APP_IMAGE_NEW=
+DIB_APP_SRC_ENV=
+DIB_APP_DEST_ENV=
 DIB_DOCKER_COMPOSE_FILE_CHANGED=0
 DIB_K8S_RESOURCES_ANNOTATIONS_FILES_CHANGED=0
 DIB_APP_ENV_FILE_CHANGED=0
@@ -121,6 +124,8 @@ in
   view) execute_view_command "$@";;
   env) execute_env_command "$@";;
   edit:deploy) execute_edit_deploy_command "$@";;
+  copy:env) execute_copy_env_command "$@";;
+  copy:env:new) execute_copy_env_new_command "$@";;
   *)
     msg "Run command '$DIB_RUN_COMMAND' unknown."
     exit 1

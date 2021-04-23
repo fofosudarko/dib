@@ -62,6 +62,7 @@ function execute_switch_command() {
   USER_DIB_APP_ENVIRONMENT="${2:-}"
   
   should_show_help "$USER_DIB_APP_IMAGE" && show_switch_help
+  check_app_key_validity
   perform_root_cache_operations
   load_core_data
   ensure_core_variables_validity
@@ -96,6 +97,29 @@ function execute_copy_command() {
   set_project_directories_on_copy
   copy_docker_project
   save_data_to_root_cache_on_copy
+}
+
+function execute_copy_env_command() {
+  USER_DIB_APP_IMAGE="${1:-}"
+  DIB_APP_DEST_ENV="${2:-}"
+  DIB_APP_SRC_ENV="${3:-}"
+
+  should_show_help "$USER_DIB_APP_IMAGE" && show_copy_env_help
+  perform_root_cache_operations
+  perform_app_cache_operations
+  transfer_dirs_data_from_src_to_dest_env_on_copy_env
+}
+
+function execute_copy_env_new_command() {
+  USER_DIB_APP_IMAGE="${1:-}"
+  DIB_APP_IMAGE_NEW="${2:-}"
+  DIB_APP_DEST_ENV="${3:-}"
+  DIB_APP_SRC_ENV="${4:-}"
+
+  should_show_help "$USER_DIB_APP_IMAGE" && show_copy_env_new_help
+  perform_root_cache_operations
+  perform_app_cache_operations
+  transfer_dirs_data_from_src_to_dest_env_on_copy_env_new
 }
 
 function execute_reset_command() {

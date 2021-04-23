@@ -13,7 +13,7 @@
 # filters
 
 : ${DIB_APP_ENVIRONMENTS='^(dev|develop|development|test|staging|beta|prod|production|demo|alpha)$'}
-: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next|rails|django|hugo|jekyll|gatsby|dotnet|vue|laravel)$'}
+: ${DIB_APP_FRAMEWORKS='^(spring|angular|react|flask|express|mux|feathers|nuxt|next|rails|django|hugo|jekyll|gatsby|dotnet|vue|laravel|redwood)$'}
 : ${DIB_APP_INVALID_PATH_TOKENS='example\-(project|framework|environment|service)'}
 : ${DIB_APP_CONFIG_EXCLUDE_PATTERNS='application*properties\n*copy'}
 : ${DIB_APP_DATABASE_KEY_PATTERN='^[[:alnum:]]+$'}

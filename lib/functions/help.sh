@@ -24,7 +24,9 @@ Commands:
   build:push:deploy      Build container image, push it to a container registry and deploy to a kubernetes cluster
   build:run              Build container image and run it locally
   cache                  Show cache information for current working environment
-  copy                   Copy application source to a build area                 
+  copy                   Copy application source to a build area
+  copy:env               Copy data from one environment to another for a subproject
+  copy:env:new           Copy data from one environment of a subproject to a new one                 
   deploy                 Deploy manifests to a kubernetes cluster
   doctor                 Check whether dependencies have been met
   edit                   Edit files
@@ -63,12 +65,12 @@ Usage:
   dib goto DIB_APP_FRAMEWORK DIB_APP_IMAGE
 
 Where:
-  DIB_APP_FRAMEWORK represents the software framework that your application is built with
-  DIB_APP_PROJECT   represents the main project where your application may consist of many subprojects
-  DIB_APP_IMAGE     represents the name used to produce the container image. It may be your subproject name.
+  DIB_APP_FRAMEWORK indicates the software framework that your application is built with
+  DIB_APP_PROJECT   indicates the main project where your application may consist of many subprojects
+  DIB_APP_IMAGE     indicates the container image. It may be a subproject name.
 
 Returns:
-  DIB_APP_KEY       represents the unique key used during the application runtime for a subproject
+  DIB_APP_KEY       indicates the unique key used during the application runtime for a subproject
 
 Example:
   dib goto spring bricks bricks-api
@@ -84,6 +86,11 @@ Get key by project from database
 Usage:
   dib get:key DIB_APP_FRAMEWORK:DIB_APP_PROJECT:DIB_APP_IMAGE
 
+Where:
+  DIB_APP_FRAMEWORK indicates the software framework that your application is built with
+  DIB_APP_PROJECT   indicates the main project where your application may consist of many subprojects
+  DIB_APP_IMAGE     indicates the container image. It may be a subproject name.
+
 Example:
   dib get:key spring:bricks:bricks-api
 "
@@ -96,6 +103,9 @@ Get project by key from database
 
 Usage:
   dib get:project DIB_APP_KEY
+
+Where:
+  DIB_APP_KEY       indicates the unique key used during the application runtime for a subproject
 
 Example:
   dib get:project aac87fe5e61c49a5861e7870b0292748
@@ -111,8 +121,8 @@ Usage:
   dib build DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib build bricks-api v1.0.1
@@ -128,8 +138,8 @@ Usage:
   dib build:push DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib build:push bricks-api v1.0.1
@@ -145,8 +155,8 @@ Usage:
   dib build:push DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib build:push:deploy bricks-api v1.0.1  
@@ -162,8 +172,8 @@ Usage:
   dib build:run DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib build:run bricks-api v1.0.1
@@ -179,8 +189,8 @@ Usage:
   dib push DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib push bricks-api v1.0.1
@@ -196,8 +206,8 @@ Usage:
   dib deploy DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib deploy bricks-api v1.0.1
@@ -213,8 +223,8 @@ Usage:
   dib generate DIB_APP_IMAGE DIB_APP_IMAGE_TAG
 
 Where:
-  DIB_APP_IMAGE      represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_IMAGE_TAG  represents the tag for the container image
+  DIB_APP_IMAGE      indicates the container image. It may be a subproject name.
+  DIB_APP_IMAGE_TAG  indicates the tag for the container image
 
 Example:
   dib generate bricks-api v1.0.1
@@ -230,9 +240,9 @@ Usage:
   dib edit DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the type of file to edit. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource to edit.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the type of file to edit. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource to edit.
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
@@ -257,9 +267,9 @@ Usage:
   dib show DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the type of file to show. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource to show.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the type of file to show. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource to show.
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
@@ -284,9 +294,9 @@ Usage:
   dib path DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the file type path. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource path.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the file type path. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource path.
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
@@ -311,9 +321,9 @@ Usage:
   dib restore DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the type of file to restore. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource to restore.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the type of file to restore. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource to restore.
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
@@ -338,9 +348,9 @@ Usage:
   dib erase DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the type of file to erase. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource to erase.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the type of file to erase. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource to erase.
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
@@ -365,9 +375,9 @@ Usage:
   dib view DIB_APP_IMAGE DIB_APP_FILE_TYPE DIB_APP_FILE_RESOURCE
 
 Where:
-  DIB_APP_IMAGE          represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_FILE_TYPE      represents the type of file to view. It may be env, config, compose, k8s-annotations, spring, cache, and run
-  DIB_APP_FILE_RESOURCE  represents the file resource to view.
+  DIB_APP_IMAGE          indicates the container image. It may be a subproject name.
+  DIB_APP_FILE_TYPE      indicates the type of file to view. It may be env, config, compose, k8s-annotations, spring, cache, and run
+  DIB_APP_FILE_RESOURCE  indicates the file resource to view.
 
   Below are the file resources for each file type:
     config               dockercomposefile
@@ -388,7 +398,7 @@ Usage:
   dib env DIB_APP_ENV_TYPE
 
 Where:
-  DIB_APP_ENV_TYPE   represents the environment variables to show. It may be all, globals, app, docker, kompose, and kubernetes
+  DIB_APP_ENV_TYPE   indicates the environment variables to show. It may be all, globals, app, docker, kompose, and kubernetes
 
 Example:
   dib env all
@@ -404,8 +414,8 @@ Usage:
   dib switch DIB_APP_IMAGE DIB_APP_ENVIRONMENT
 
 Where:
-  DIB_APP_IMAGE        represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_ENVIRONMENT  represents the environment the application switches to
+  DIB_APP_IMAGE        indicates the container image. It may be a subproject name.
+  DIB_APP_ENVIRONMENT  indicates the environment the application switches to
 
 Example:
   dib switch bricks-api dev
@@ -421,13 +431,53 @@ Usage:
   dib copy DIB_APP_IMAGE DIB_APP_BUILD_SRC [DIB_APP_BUILD_DEST]
 
 Where:
-  DIB_APP_IMAGE        represents the name used to produce the container image. It may be your subproject name.
-  DIB_APP_BUILD_SRC    represents the application source
-  DIB_APP_BUILD_DEST   represents the build area for the application. This is very optional.
+  DIB_APP_IMAGE        indicates the container image. It may be a subproject name.
+  DIB_APP_BUILD_SRC    indicates the application source
+  DIB_APP_BUILD_DEST   indicates the build area for the application. This is optional.
 
 Example:
   dib copy bricks-api /Users/example/Projects/spring/bricks-api
   dib copy bricks-api /Users/example/Projects/spring/bricks-api /Users/example/Projects/container-images/bricks-api
+"
+  exit 0
+}
+
+function show_copy_env_help() {
+  msg "
+Copy data from one environment to another for a subproject
+
+Usage:
+  dib copy:env DIB_APP_IMAGE DIB_APP_DEST_ENV [DIB_APP_SRC_ENV] 
+
+Where:
+  DIB_APP_IMAGE        indicates the container image. It may be a subproject name
+  DIB_APP_DEST_ENV     indicates the destination environment
+  DIB_APP_SRC_ENV      indicates the source environment. This is optional
+
+Example:
+  dib copy:env bricks-api staging
+  dib copy:env bricks-api staging development
+"
+  exit 0
+}
+
+function show_copy_env_new_help() {
+  msg "
+Copy data from one environment of a subproject to a new one
+
+Usage:
+  dib copy:env:new DIB_APP_IMAGE DIB_APP_IMAGE_NEW [DIB_APP_DEST_ENV] [DIB_APP_SRC_ENV] 
+
+Where:
+  DIB_APP_IMAGE        indicates the container image. It may be a subproject name
+  DIB_APP_IMAGE_NEW    indicates the new container image. It may be a subproject name
+  DIB_APP_DEST_ENV     indicates the destination environment. This is optional
+  DIB_APP_SRC_ENV      indicates the source environment. This is optional
+
+Example:
+  dib copy:env:new bricks-api materials-api
+  dib copy:env:new bricks-api materials-api staging
+  dib copy:env:new bricks-api materials-api staging development
 "
   exit 0
 }

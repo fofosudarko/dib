@@ -48,9 +48,8 @@ function get_app_key_by_project_value() {
 
   if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$project_value" ]]
   then
-    grep "$project_value" "$DIB_APP_DATABASE_FILE" | \
-    cut -d' ' -f1 | \
-    grep -E --color=never "$DIB_APP_DATABASE_KEY_PATTERN"
+    grep -E "[[:space:]]+$project_value$" "$DIB_APP_DATABASE_FILE" | \
+    cut -d' ' -f1  | tr -d '[:space:]' 
   fi
 }
 
@@ -59,9 +58,8 @@ function get_project_value_by_app_key() {
 
   if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$app_key" ]]
   then
-    grep "$app_key" "$DIB_APP_DATABASE_FILE" | \
-    cut -d' ' -f2 | \
-    grep -E --color=never "$DIB_APP_DATABASE_VALUE_PATTERN"
+    grep -E "^$app_key[[:space:]]+" "$DIB_APP_DATABASE_FILE" | \
+    cut -d' ' -f2 | tr -d '[:space:]'
   fi
 }
 
@@ -70,7 +68,7 @@ function remove_entry_by_app_key() {
 
   if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$app_key" ]]
   then
-    sed -e "/${app_key}/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
+    sed -E -e "/^${app_key}[[:space:]]+/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
     cp "$DIB_APP_TMP_FILE" "$DIB_APP_DATABASE_FILE"
   fi
 } 2> /dev/null
@@ -80,7 +78,7 @@ function remove_entry_by_project_value() {
 
   if [[ -f "$DIB_APP_DATABASE_FILE" && -n "$project_value" ]]
   then
-    sed -e "/${project_value}/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
+    sed -E -e "/[[:space:]]+${project_value}$/d" "$DIB_APP_DATABASE_FILE" 1> "$DIB_APP_TMP_FILE" && \
     cp "$DIB_APP_TMP_FILE" "$DIB_APP_DATABASE_FILE"
   fi
 } 2> /dev/null

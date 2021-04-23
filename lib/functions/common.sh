@@ -424,15 +424,24 @@ function columnize_items() {
   echo -ne "$1" | sed -E -e 's/[[:space:]]+//g' -e 's/,/\n/g' | grep -vE '^$' | grep -vE '^\s+$'
 }
 
+function check_app_key_validity() {
+  if [[ -n "$DIB_APP_KEY" ]]
+  then
+    if ! echo -ne "$(get_project_value_by_app_key "$DIB_APP_KEY")" | grep -qE "$USER_DIB_APP_IMAGE$"
+    then
+      msg "Invalid app key '$DIB_APP_KEY'. Please try again."
+      exit 1
+    fi
+  fi
+}
+
 function load_app_cache_file() {
   [[ -f "$DIB_APP_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_CACHE_FILE" || :
 }
 
 function load_root_cache_file() {
   [[ -z "$DIB_APP_KEY" ]] && { msg "Please provide DIB_APP_KEY and try again."; exit 1; }
-
   format_root_cache_file
-
   [[ -f "$DIB_APP_ROOT_CACHE_FILE" ]] && source_envvars_from_file "$DIB_APP_ROOT_CACHE_FILE" || :
 }
 
