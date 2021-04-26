@@ -36,7 +36,7 @@
 : ${DIB_APP_IMAGE_PLACEHOLDER='example-service'}
 : ${DIB_APP_FRAMEWORK_PLACEHOLDER='example-framework'}
 : ${DIB_APP_ENVIRONMENT_PLACEHOLDER='example-environment'}
-: ${DIB_APP_VERSION='v1.0.0-rc4'}
+: ${DIB_APP_VERSION='v1.0.0'}
 
 # dirs
 
