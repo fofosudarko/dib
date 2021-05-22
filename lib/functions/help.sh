@@ -246,7 +246,7 @@ Where:
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
-    config               dockerfile, dockercomposefile, and runscript
+    config               dockerfile, dockercomposefile, buildscript, and runscript
     compose              dockercomposefile
     k8s-annotations      <name of kubernetes resource> e.g. ingress
     spring               application-properties
@@ -273,7 +273,7 @@ Where:
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
-    config               dockerfile, dockercomposefile, and runscript
+    config               dockerfile, dockercomposefile, buildscript, and runscript
     compose              dockercomposefile
     k8s-annotations      <name of kubernetes resource> e.g. ingress
     spring               application-properties
@@ -300,7 +300,7 @@ Where:
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
-    config               dockerfile, dockercomposefile, and runscript
+    config               dockerfile, dockercomposefile, buildscript, and runscript
     compose              dockercomposefile
     k8s-annotations      <name of kubernetes resource> e.g. ingress
     spring               application-properties
@@ -327,7 +327,7 @@ Where:
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
-    config               dockerfile, dockercomposefile, and runscript
+    config               dockerfile, dockercomposefile, buildscript, and runscript
     compose              dockercomposefile
     k8s-annotations      <name of kubernetes resource> e.g. ingress
     spring               application-properties
@@ -354,7 +354,7 @@ Where:
 
   Below are the file resources for each file type:
     env                  app-env, service-env, common-env, and project-env
-    config               dockerfile, dockercomposefile, and runscript
+    config               dockerfile, dockercomposefile, buildscript, and runscript
     compose              dockercomposefile
     k8s-annotations      <name of kubernetes resource> e.g. ingress
     spring               application-properties

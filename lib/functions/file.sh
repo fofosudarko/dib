@@ -226,6 +226,26 @@ function execute_file_command() {
             ;;
           esac
         ;;
+        buildscript)
+          case "$command"
+          in
+            edit)
+              edit_file "$DIB_APP_CONFIG_BUILD_SCRIPT" "$DIB_APP_CONFIG_BUILD_SCRIPT_COPY"
+            ;;
+            show)
+              show_file "$DIB_APP_CONFIG_BUILD_SCRIPT"
+            ;;
+            path)
+              locate_file "$DIB_APP_CONFIG_BUILD_SCRIPT"
+            ;;
+            erase)
+              erase_file "$DIB_APP_CONFIG_BUILD_SCRIPT"
+            ;;
+            restore)
+              restore_file "$DIB_APP_CONFIG_BUILD_SCRIPT_COPY" "$DIB_APP_CONFIG_BUILD_SCRIPT"
+            ;;
+          esac
+        ;;
       esac
     ;;
     compose)
