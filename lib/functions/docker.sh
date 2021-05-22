@@ -29,7 +29,7 @@ function format_docker_compose_template() {
     -e "s/{{DIB_APP_IMAGE_TAG}}/${APP_IMAGE_TAG}/g" \
     -e "s/{{DIB_APP_ENVIRONMENT}}/${APP_ENVIRONMENT}/g" \
     -e "s/{{DIB_APP_FRAMEWORK}}/${APP_FRAMEWORK}/g" \
-    -e "s/{{DIB_APP_PACKAGER_RUN_COMMANDS}}/${APP_PACKAGER_RUN_COMMANDS}/g" \
+    -e "s/{{DIB_APP_PACKAGER_BUILD_COMMANDS}}/${APP_PACKAGER_BUILD_COMMANDS}/g" \
     -e "s/{{DIB_KOMPOSE_IMAGE_PULL_SECRET}}/${KOMPOSE_IMAGE_PULL_SECRET}/g" \
     -e "s/{{DIB_KOMPOSE_IMAGE_PULL_POLICY}}/${KOMPOSE_IMAGE_PULL_POLICY}/g" \
     -e "s/{{DIB_KOMPOSE_SERVICE_TYPE}}/${KOMPOSE_SERVICE_TYPE}/g" \
@@ -142,6 +142,42 @@ function build_docker_image() {
     ;;
     mux)
       msg 'Building mux docker image ...'
+      select_docker_build_process
+    ;;
+    rails)
+      msg 'Building rails docker image ...'
+      select_docker_build_process
+    ;;
+    django)
+      msg 'Building django docker image ...'
+      select_docker_build_process
+    ;;
+    hugo)
+      msg 'Building hugo docker image ...'
+      select_docker_build_process
+    ;;
+    jekyll)
+      msg 'Building jekyll docker image ...'
+      select_docker_build_process
+    ;;
+    gatsby)
+      msg 'Building gatsby docker image ...'
+      select_docker_build_process
+    ;;
+    dotnet)
+      msg 'Building dotnet docker image ...'
+      select_docker_build_process
+    ;;
+    vue)
+      msg 'Building vue docker image ...'
+      select_docker_build_process
+    ;;
+    laravel)
+      msg 'Building laravel docker image ...'
+      select_docker_build_process
+    ;;
+    redwood)
+      msg 'Building redwood docker image ...'
       select_docker_build_process
     ;;
     *)
