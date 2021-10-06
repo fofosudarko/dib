@@ -264,6 +264,46 @@ function run_docker_container() {
   save_data_to_cache_on_run
 }
 
+function stack_run_docker_container() {
+  local service_stack="${APP_IMAGE}_service_stack"
+
+  msg "Running docker container services for ${service_stack} ..."
+
+  format_docker_compose_template "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
+    
+  $DOCKER_CMD stack deploy --compose-file "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" "$service_stack"
+}
+
+function stack_ls_docker_container() {
+  msg 'Reading current docker stack services ...'
+
+  $DOCKER_CMD stack ls
+}
+
+function stack_rm_docker_container() {
+
+  local service_stack="${APP_IMAGE}_service_stack"
+
+  msg "Removing docker container services for ${service_stack} ..."
+    
+  $DOCKER_CMD stack rm "$service_stack"
+}
+
+function logs_docker_container() {
+
+  msg "Logging docker container ..."
+    
+  $DOCKER_CMD logs -f "$APP_IMAGE"
+}
+
+function stack_logs_docker_container() {
+  local service_stack="${APP_IMAGE}_service_stack"
+
+  msg "Logging docker container services for ${service_stack} ..."
+    
+  ${DOCKER_CMD} logs -f $($DOCKER_CMD ps| grep "$APP_IMAGE"| tr -s '[:space:]' | cut -d' ' -f1)
+}
+
 function stop_docker_container() {
   msg 'Stopping docker container ...'
 
