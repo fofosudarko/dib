@@ -114,6 +114,11 @@ in
   deploy) execute_deploy_command "$@";;
   generate) execute_generate_command "$@";;
   run) execute_run_command;;
+  logs) execute_logs_command;;
+  stack:run) execute_stack_run_command;;
+  stack:ls) execute_stack_ls_command;;
+  stack:rm) execute_stack_rm_command;;
+  stack:logs) execute_stack_logs_command;;
   stop) execute_stop_command;;
   edit) execute_edit_command "$@";;
   show) execute_show_command "$@";;

@@ -206,6 +206,36 @@ function execute_run_command() {
   run_docker_container
 }
 
+function execute_stack_run_command() {
+  perform_root_cache_operations
+  perform_app_cache_operations
+  stack_run_docker_container
+}
+
+function execute_stack_ls_command() {
+  perform_root_cache_operations
+  perform_app_cache_operations
+  stack_ls_docker_container
+}
+
+function execute_stack_rm_command() {
+  perform_root_cache_operations
+  perform_app_cache_operations
+  stack_rm_docker_container
+}
+
+function execute_logs_command() {
+  perform_root_cache_operations
+  perform_app_cache_operations
+  logs_docker_container
+}
+
+function execute_stack_logs_command() {
+  perform_root_cache_operations
+  perform_app_cache_operations
+  stack_logs_docker_container
+}
+
 function execute_stop_command() {
   perform_root_cache_operations
   perform_app_cache_operations

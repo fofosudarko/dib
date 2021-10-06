@@ -39,6 +39,7 @@ Commands:
   goto                   Go to a new or existing project
   help                   Show help information and quit
   init                   Initialize dib environment once
+  logs                   Log current docker container
   path                   Show paths to files
   ps                     Show status of a running container
   push                   Push container image to a container registry
@@ -46,6 +47,10 @@ Commands:
   restore                Restore files
   run                    Run a container locally
   show                   Show content of files
+  stack:logs             Log container service stack
+  stack:ls               List all container service stacks
+  stack:rm               Remove container service stack
+  stack:run              Run container service stack
   stop                   Stop a running container
   switch                 Switch project environments
   version                Show version information and quit
