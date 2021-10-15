@@ -92,7 +92,7 @@ function build_docker_image_from_file() {
     exit 1
   fi
 
-  $DOCKER_CMD build -t "$target_image" $DIB_APP_BUILD_DEST
+  $CONTAINER_MANAGER_CMD build -t "$target_image" $DIB_APP_BUILD_DEST
 
   return "$?"
 }
@@ -195,36 +195,36 @@ function push_docker_image() {
 
   ensure_paths_exist "$DOCKER_LOGIN_PASSWORD"
 
-  $DOCKER_CMD logout 2> /dev/null
-  $DOCKER_CMD login --username "$DOCKER_LOGIN_USERNAME" --password-stdin < "$DOCKER_LOGIN_PASSWORD" "$DIB_APPS_CONTAINER_REGISTRY"
-  $DOCKER_CMD tag "$target_image" "$remote_target_image"
-  $DOCKER_CMD push "$remote_target_image"
-  $DOCKER_CMD logout 2> /dev/null
+  $CONTAINER_MANAGER_CMD logout 2> /dev/null
+  $CONTAINER_MANAGER_CMD login --username "$DOCKER_LOGIN_USERNAME" --password-stdin < "$DOCKER_LOGIN_PASSWORD" "$DIB_APPS_CONTAINER_REGISTRY"
+  $CONTAINER_MANAGER_CMD tag "$target_image" "$remote_target_image"
+  $CONTAINER_MANAGER_CMD push "$remote_target_image"
+  $CONTAINER_MANAGER_CMD logout 2> /dev/null
 }
 
 function is_docker_container_running() {
-  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=running" -q)
+  local result=$($CONTAINER_MANAGER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=running" -q)
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_dead() {
-  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=dead" -q)
+  local result=$($CONTAINER_MANAGER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=dead" -q)
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_exited() {
-  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=exited" -q)
+  local result=$($CONTAINER_MANAGER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=exited" -q)
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_container_paused() {
-  local result=$($DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=paused" -q)
+  local result=$($CONTAINER_MANAGER_CMD container ps --filter "name=${APP_IMAGE}" --filter "status=paused" -q)
   [[ -n "$result" ]] && return 0 || return 1
 }
 
 function is_docker_image_changed() {
   local latest_image="${APP_IMAGE}:${APP_IMAGE_TAG}"
-  local current_image=$($DOCKER_CMD container ps --filter="name=${APP_IMAGE}" --format '{{.Image}}' )
+  local current_image=$($CONTAINER_MANAGER_CMD container ps --filter="name=${APP_IMAGE}" --format '{{.Image}}' )
   
   [[ "$current_image" != "$latest_image" ]] && return 0 || return 1
 }
@@ -265,43 +265,43 @@ function run_docker_container() {
 }
 
 function stack_run_docker_container() {
-  local service_stack="${APP_IMAGE}_service_stack"
+  local service_stack="${APP_IMAGE}_stack"
 
   msg "Running docker container services for ${service_stack} ..."
 
   format_docker_compose_template "$DIB_APP_RUN_DOCKER_COMPOSE_TEMPLATE_FILE" "$DIB_APP_RUN_DOCKER_COMPOSE_FILE"
     
-  $DOCKER_CMD stack deploy --compose-file "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" "$service_stack"
+  $CONTAINER_MANAGER_CMD stack deploy --compose-file "$DIB_APP_RUN_DOCKER_COMPOSE_FILE" "$service_stack"
 }
 
 function stack_ls_docker_container() {
   msg 'Reading current docker stack services ...'
 
-  $DOCKER_CMD stack ls
+  $CONTAINER_MANAGER_CMD stack ls
 }
 
 function stack_rm_docker_container() {
 
-  local service_stack="${APP_IMAGE}_service_stack"
+  local service_stack="${APP_IMAGE}_stack"
 
   msg "Removing docker container services for ${service_stack} ..."
     
-  $DOCKER_CMD stack rm "$service_stack"
+  $CONTAINER_MANAGER_CMD stack rm "$service_stack"
 }
 
 function logs_docker_container() {
 
   msg "Logging docker container ..."
     
-  $DOCKER_CMD logs -f "$APP_IMAGE"
+  $CONTAINER_MANAGER_CMD logs -f "$APP_IMAGE"
 }
 
 function stack_logs_docker_container() {
-  local service_stack="${APP_IMAGE}_service_stack"
+  local service_stack="${APP_IMAGE}_stack"
 
   msg "Logging docker container services for ${service_stack} ..."
     
-  ${DOCKER_CMD} logs -f $($DOCKER_CMD ps| grep "$APP_IMAGE"| tr -s '[:space:]' | cut -d' ' -f1)
+  ${CONTAINER_MANAGER_CMD} logs -f $($CONTAINER_MANAGER_CMD ps| grep "$APP_IMAGE"| tr -s '[:space:]' | cut -d' ' -f1)
 }
 
 function stop_docker_container() {
@@ -309,17 +309,17 @@ function stop_docker_container() {
 
   if is_docker_container_running
   then
-    $DOCKER_CMD container stop $APP_IMAGE
-    $DOCKER_CMD container rm -f $APP_IMAGE
+    $CONTAINER_MANAGER_CMD container stop $APP_IMAGE
+    $CONTAINER_MANAGER_CMD container rm -f $APP_IMAGE
   elif is_docker_container_dead || is_docker_container_exited || is_docker_container_paused
   then
-    $DOCKER_CMD container rm -f $APP_IMAGE
+    $CONTAINER_MANAGER_CMD container rm -f $APP_IMAGE
   fi
 }
 
 function ps_docker_container() {
   msg 'Showing docker container ...'
-  $DOCKER_CMD container ps --filter "name=${APP_IMAGE}" --all
+  $CONTAINER_MANAGER_CMD container ps --filter "name=${APP_IMAGE}" --all
 }
 
 ## -- finish

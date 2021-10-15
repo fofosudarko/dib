@@ -227,7 +227,7 @@ function app_env_file_changed() {
 }
 
 function check_app_dependencies() {
-  if [[ -x "$DOCKER_CMD" ]] 
+  if [[ -x "$CONTAINER_MANAGER_CMD" ]] 
   then
     msg 'docker already installed successfully'
   else
@@ -276,6 +276,16 @@ function check_app_dependencies() {
     msg '
     Oops, nano command not found.
     Please install and continue since this command helps you to edit some files as your default editor.'
+  fi
+
+  if [[ -x "$PODMAN_CMD" ]] 
+  then
+    msg 'podman already installed successfully'
+  else
+    msg '
+    Oops, podman command not found.
+    Please install and continue since this command helps you to build, run and push your container images
+    '
   fi
 }
 
