@@ -36,7 +36,7 @@
 : ${DIB_APP_IMAGE_PLACEHOLDER='example-service'}
 : ${DIB_APP_FRAMEWORK_PLACEHOLDER='example-framework'}
 : ${DIB_APP_ENVIRONMENT_PLACEHOLDER='example-environment'}
-: ${DIB_APP_VERSION='v1.1.1'}
+: ${DIB_APP_VERSION='v1.2.1'}
 
 # dirs
 
@@ -51,6 +51,7 @@
 : ${DIB_APPS_CACHE_DIR="$DIB_HOME/.cache"}
 : ${DIB_APPS_SECRETS_DIR="$DIB_HOME/.secrets"}
 : ${DIB_APPS_RUN_DIR="$DIB_HOME/run"}
+: ${DIB_CONTAINER_MANAGER=${DIB_CONTAINER_MANAGER:-'docker'}}
 
 # templates
 
@@ -64,5 +65,17 @@ DIB_APP_DATABASE_FILE_COPY="${DIB_APP_DATABASE_FILE}.copy"
 DIB_APP_ROOT_CACHE_FILE="$DIB_APPS_CACHE_DIR/$ROOT_CACHE_DIR_TEMPLATE/root_cache"
 DIB_APP_ROOT_CACHE_FILE_COPY="${DIB_APP_ROOT_CACHE_FILE}.copy"
 DIB_APP_TMP_FILE=$(mktemp)
+
+if [[ -n "$DIB_CONTAINER_MANAGER" ]]
+then
+  if [[ "$DIB_CONTAINER_MANAGER" == "podman" ]]
+  then
+    CONTAINER_MANAGER_CMD="$PODMAN_CMD"
+  else
+    CONTAINER_MANAGER_CMD="$DOCKER_CMD"
+  fi
+else
+  CONTAINER_MANAGER_CMD="$DOCKER_CMD"
+fi
 
 ## -- finish

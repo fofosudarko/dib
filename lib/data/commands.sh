@@ -12,6 +12,7 @@
 
 : ${DOCKER_CMD="$(which docker 2> /dev/null)"}
 : ${DOCKER_COMPOSE_CMD="$(which docker-compose 2> /dev/null)"}
+: ${PODMAN_CMD="$(which podman 2> /dev/null)"}
 : ${KOMPOSE_CMD="$(which kompose 2> /dev/null)"}
 : ${KUBECTL_CMD="$(which kubectl 2> /dev/null)"}
 : ${NANO_CMD="$(which nano 2> /dev/null)"}
